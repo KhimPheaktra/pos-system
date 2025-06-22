@@ -11,5 +11,5 @@ class ProductRecordModel extends Model
 
     protected $table = 'product_records';
 
-    protected $fillable = ['id','product_id','old_name','new_name','old_price','new_price','old_qty','new_qty','updated_by'];
+    protected $fillable = ['id','product_id','old_name','new_name','old_price','new_price','old_qty','new_qty','old_code', 'new_code' ,'updated_by'];
 }

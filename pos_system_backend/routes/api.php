@@ -24,12 +24,14 @@ Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
 
 // Category Api
 Route::get('category',[CategoryController::class , 'list']);
+Route::get('category/{id}',[CategoryController::class , 'getById']);
 Route::post('category/add',[CategoryController::class , 'add']);
 Route::post('category/update/{id}', [CategoryController::class, 'update']);
 Route::delete('category/delete/{id}', [CategoryController::class, 'delete']);
 
 // Product Api
 Route::get('product',[ProductController::class,'list']);
+Route::get('product/{id}',[ProductController::class,'getById']);
 Route::post('product/add',[ProductController::class,'add']);
 Route::post('product/update/{id}',[ProductController::class,'update']);
 Route::delete('product/delete/{id}',[ProductController::class,'delete']);
@@ -37,6 +39,7 @@ Route::delete('product/delete/{id}',[ProductController::class,'delete']);
 
 // Exchange Rate
 Route::get('exchange-rate',[ExchangeRateController::class ,'list']);
+Route::get('exchange-rate/{id}',[ExchangeRateController::class ,'getById']);
 Route::post('exchange-rate/add',[ExchangeRateController::class ,'add']);
 Route::post('exchange-rate/update/{id}',[ExchangeRateController::class ,'update']);
 Route::delete('exchange-rate/delete/{id}',[ExchangeRateController::class ,'delete']);
@@ -44,4 +47,8 @@ Route::delete('exchange-rate/delete/{id}',[ExchangeRateController::class ,'delet
 
 // Sale
 Route::get('sale',[SaleController::class,'list']);
+Route::get('sale/{id}', [SaleController::class, 'getById'])->where('id', '[0-9]+');
 Route::post('sale/add',[SaleController::class,'add']);
+Route::post('sale/update/{id}',[SaleController::class,'update']);
+Route::delete('sale/delete/{id}',[SaleController::class,'delete']);
+

@@ -18,12 +18,16 @@ return new class extends Migration
                 ->constrained('products')
                 ->onDelete('restrict');
 
+            $table->string('old_code')->nullable();
+            $table->string('new_code')->nullable();
             $table->string('old_name')->nullable();
             $table->string('new_name')->nullable();
             $table->decimal('old_price', 10, 2)->nullable();
             $table->decimal('new_price', 10, 2)->nullable();
             $table->decimal('old_qty', 8, 2)->nullable();
             $table->decimal('new_qty', 8, 2)->nullable();
+            $table->decimal('old_discount', 10, 2)->nullable();
+            $table->decimal('new_discount', 10, 2)->nullable();
             $table->foreignId('updated_by')->nullable()
                 ->constrained('users')
                 ->onDelete('restrict');

@@ -11,7 +11,55 @@ class CategoryController extends Controller
     //
 
     protected function list(){
-         return response()->json(CategoryModel::all());
+        try{
+            $category = CategoryModel::all();
+            if(!empty($category)){
+                return response()->json([
+                    'category' => $category
+                ],200);
+            }
+            else{
+                 return response()->json([
+                'message' => 'No data found '
+            ], 404);
+            }
+          
+        }
+        catch(\Exception $e){
+            Log::error('Error get category: ' . $e->getMessage());
+
+        return response()->json([
+            'message' => 'Something went wrong.',
+            'error' => $e->getMessage()
+        ], 500); // 500 Internal Server Error
+        }
+
+        
+    }
+
+    protected function getById($id){
+        try{
+            $category = CategoryModel::findOrFail($id);
+        if(!empty($category)){
+                return response()->json([
+                    'category' => $category
+                ],200);
+            }
+            else{
+                 return response()->json([
+                'message' => 'No data found '
+            ], 404);
+            }
+        }
+        catch(\Exception $e){
+            Log::error('Error get category by id: ' . $e->getMessage());
+
+        return response()->json([
+            'message' => 'Something went wrong.',
+            'error' => $e->getMessage()
+        ], 500); // 500 Internal Server Error
+        }
+       
     }
 
     protected function add(Request $request){
@@ -33,10 +81,18 @@ class CategoryController extends Controller
             'image' => $imagePath, 
         ]);
 
-        return response()->json([
+        if(!empty($category)){
+            return response()->json([
             'message' => 'Category added successfully.',
             'category' => $category
         ], 201); // 201 Created
+        }
+        else{
+             return response()->json([
+                'message' => 'Add failed '
+            ], 500);
+        }
+        
 
     } catch (\Exception $e) {
         // Optional: log the error for debugging
@@ -72,10 +128,18 @@ class CategoryController extends Controller
         $category->note = $request->note;
         $category->save();
 
-        return response()->json([
+        if(!empty($category)){
+            return response()->json([
             'message' => 'Category updated successfully.',
             'category' => $category
         ], 200);
+        }
+        else{
+             return response()->json([
+                'message' => 'Update failed '
+            ], 500);
+        }
+  
 
     } catch (\Exception $e) {
         return response()->json([

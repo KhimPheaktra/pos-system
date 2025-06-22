@@ -5,13 +5,64 @@ namespace App\Http\Controllers;
 use App\Models\ExchangeRateModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+
 
 class ExchangeRateController extends Controller
 {
     //
 
     protected function list(){
-        return response()->json(ExchangeRateModel::all());
+          try{
+            $exchangeRate = ExchangeRateModel::all();
+            if(!empty($exchangeRate)){
+                return response()->json([
+                    'exchangeRate' => $exchangeRate,
+                ],200);
+            }
+            else{
+                return response()->json([
+                'message' => 'No data found '
+            ], 404);
+            }
+
+        }
+        catch(\Exception $e){
+            Log::error('Error get exchange rate: ' . $e->getMessage());
+
+        return response()->json([
+            'message' => 'Something went wrong.',
+            'error' => $e->getMessage()
+        ], 500); // 500 Internal Server Error
+        }
+     
+    }
+
+    protected function getById($id){
+        try{
+            $exchangeRate = ExchangeRateModel::findOrFail($id);
+            if(!empty($exchangeRate)){
+                return response()->json([
+                    'exchangeRate' => $exchangeRate,
+                ],200);
+            }   
+            else{
+                return response()->json([
+                'message' => 'No data found '
+            ], 404);
+            }
+          
+        }
+        catch(\Exception $e){
+            Log::error('Error get exchange rate by id: ' . $e->getMessage());
+
+        return response()->json([
+            'message' => 'Something went wrong.',
+            'error' => $e->getMessage()
+        ], 500); // 500 Internal Server Error
+        }
+        
     }
 
     protected function add(Request $request){
@@ -20,7 +71,7 @@ class ExchangeRateController extends Controller
             'base_currency' => 'required|string|max:255',
             'target_currency' => 'required|string|max:255',
             'rate' => 'required|numeric',
-            'note' => 'required|string',
+            'note' => 'nullable|string',
             
         ]);
         try{
@@ -31,10 +82,18 @@ class ExchangeRateController extends Controller
                 'note' => $request->note,
             ]);
 
-            return response()->json([
+            if(!empty($exchangeRate)){
+                return response()->json([
                 'message' => 'Exchange rate added successfully',
                 'exchangeRate' => $exchangeRate
             ],201);
+            }
+            else{
+                 return response()->json([
+                'message' => 'Add failed '
+            ], 500);
+            }
+         
         }
         catch(\Exception $e){
             Log::error('Error added exchange rate: ' . $e->getMessage());
@@ -51,12 +110,25 @@ class ExchangeRateController extends Controller
             'base_currency' => 'required|string|max:255',
             'target_currency' => 'required|string|max:255',
             'rate' => 'required|numeric',
-            'note' => 'required|string',
+            'note' => 'nullable|string',
             
         ]);
 
+        $exchangeRate = ExchangeRateModel::findOrFail($id);
+        
+        $validator = Validator::make($request->only('target_currency'), [
+            'target_currency' => ['required', 'string', Rule::unique('exchange_rate', 'code')->ignore($exchangeRate->id)],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
         try{
-            $exchangeRate = ExchangeRateModel::findOrFail($id);
+            
 
             $exchangeRate->base_currency = $request->base_currency;
             $exchangeRate->target_currency = $request->target_currency;
@@ -64,10 +136,18 @@ class ExchangeRateController extends Controller
             $exchangeRate->note = $request->note;
             $exchangeRate->save();
 
-            return response()->json([
+            if(!empty($exchangeRate)){
+                return response()->json([
                 'message' => 'Exchange rate updated successfully ',
                 'exchangeRate' => $exchangeRate
             ], 200);
+            }
+            else{
+                 return response()->json([
+                'message' => 'Update failed'
+            ], 404);
+            }
+            
         }
         catch(\Exception $e){
                 return response()->json([
