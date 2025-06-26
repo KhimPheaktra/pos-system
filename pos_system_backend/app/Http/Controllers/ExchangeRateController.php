@@ -12,10 +12,15 @@ use Illuminate\Validation\Rule;
 class ExchangeRateController extends Controller
 {
     //
+      public function __construct()
+        {
+            $this->middleware('auth:sanctum');
+        }
 
-    protected function list(){
+
+    public function list(){
+        $exchangeRate = ExchangeRateModel::all();
           try{
-            $exchangeRate = ExchangeRateModel::all();
             if(!empty($exchangeRate)){
                 return response()->json([
                     'exchangeRate' => $exchangeRate,
@@ -28,7 +33,7 @@ class ExchangeRateController extends Controller
             }
 
         }
-        catch(\Exception $e){
+        catch(\Throwable $e){
             Log::error('Error get exchange rate: ' . $e->getMessage());
 
         return response()->json([
@@ -39,9 +44,9 @@ class ExchangeRateController extends Controller
      
     }
 
-    protected function getById($id){
+    public function getById($id){
+        $exchangeRate = ExchangeRateModel::findOrFail($id);
         try{
-            $exchangeRate = ExchangeRateModel::findOrFail($id);
             if(!empty($exchangeRate)){
                 return response()->json([
                     'exchangeRate' => $exchangeRate,
@@ -54,7 +59,7 @@ class ExchangeRateController extends Controller
             }
           
         }
-        catch(\Exception $e){
+        catch(\Throwable $e){
             Log::error('Error get exchange rate by id: ' . $e->getMessage());
 
         return response()->json([
@@ -65,7 +70,7 @@ class ExchangeRateController extends Controller
         
     }
 
-    protected function add(Request $request){
+    public function add(Request $request){
 
         $request->validate([
             'base_currency' => 'required|string|max:255',
@@ -95,7 +100,7 @@ class ExchangeRateController extends Controller
             }
          
         }
-        catch(\Exception $e){
+        catch(\Throwable $e){
             Log::error('Error added exchange rate: ' . $e->getMessage());
 
             return response()->json([
@@ -105,7 +110,7 @@ class ExchangeRateController extends Controller
         }
     }
 
-    protected function update(Request $request, $id){
+    public function update(Request $request, $id){
          $request->validate([
             'base_currency' => 'required|string|max:255',
             'target_currency' => 'required|string|max:255',
@@ -149,7 +154,7 @@ class ExchangeRateController extends Controller
             }
             
         }
-        catch(\Exception $e){
+        catch(\Throwable $e){
                 return response()->json([
                 'message' => 'Update failed.',
                 'error' => $e->getMessage()
@@ -157,7 +162,7 @@ class ExchangeRateController extends Controller
         }
     }
 
-    protected function delete($id){
+    public function delete($id){
         try{
             $exchangeRate = ExchangeRateModel::findOrFail($id);
             $exchangeRate->delete();
@@ -166,7 +171,7 @@ class ExchangeRateController extends Controller
                 'message' => 'Exchange deleted successfully.'
             ],200);
         }
-        catch(\Exception $e){
+        catch(\Throwable $e){
               return response()->json([
             'message' => 'Delete failed.',
             'error' => $e->getMessage()

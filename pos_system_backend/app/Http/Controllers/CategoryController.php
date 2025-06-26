@@ -10,7 +10,12 @@ class CategoryController extends Controller
 {
     //
 
-    protected function list(){
+     public function __construct()
+    {
+        $this->middleware('auth:sanctum');
+    }
+
+    public function list(){
         try{
             $category = CategoryModel::all();
             if(!empty($category)){
@@ -25,7 +30,7 @@ class CategoryController extends Controller
             }
           
         }
-        catch(\Exception $e){
+        catch(\Throwable $e){
             Log::error('Error get category: ' . $e->getMessage());
 
         return response()->json([
@@ -37,7 +42,7 @@ class CategoryController extends Controller
         
     }
 
-    protected function getById($id){
+    public function getById($id){
         try{
             $category = CategoryModel::findOrFail($id);
         if(!empty($category)){
@@ -51,7 +56,7 @@ class CategoryController extends Controller
             ], 404);
             }
         }
-        catch(\Exception $e){
+        catch(\Throwable $e){
             Log::error('Error get category by id: ' . $e->getMessage());
 
         return response()->json([
@@ -62,7 +67,7 @@ class CategoryController extends Controller
        
     }
 
-    protected function add(Request $request){
+    public function add(Request $request){
     $request->validate([
         'name' => 'required|string|max:255',
         'note' => 'nullable|string',
@@ -94,7 +99,7 @@ class CategoryController extends Controller
         }
         
 
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
         // Optional: log the error for debugging
         Log::error('Error adding category: ' . $e->getMessage());
 
@@ -106,7 +111,7 @@ class CategoryController extends Controller
     
 }
 
-    protected function update(Request $request, $id)
+    public function update(Request $request, $id)
 {
     $request->validate([
         'name' => 'required|string|max:255',
@@ -141,7 +146,7 @@ class CategoryController extends Controller
         }
   
 
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
         return response()->json([
             'message' => 'Update failed.',
             'error' => $e->getMessage()
@@ -149,22 +154,22 @@ class CategoryController extends Controller
     }
 }
 
-    protected function delete($id)
-{
-    try {
-        $category = CategoryModel::findOrFail($id);
-        $category->delete();
+    public function delete($id)
+    {
+        try {
+            $category = CategoryModel::findOrFail($id);
+            $category->delete();
 
-        return response()->json([
-            'message' => 'Category deleted successfully.'
-        ], 200);
+            return response()->json([
+                'message' => 'Category deleted successfully.'
+            ], 200);
 
-    } catch (\Exception $e) {
-        return response()->json([
-            'message' => 'Delete failed.',
-            'error' => $e->getMessage()
-        ], 500);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Delete failed.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
 
 }

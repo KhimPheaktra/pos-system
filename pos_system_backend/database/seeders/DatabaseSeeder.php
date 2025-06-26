@@ -12,7 +12,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-         $this->call(RoleSeeder::class);
+        $this->call(RoleSeeder::class);
+        $this->call(ProvinceSeeder::class);
         // \App\Models\User::factory(10)->create();
 
             DB::table('users')->insert([
@@ -42,6 +43,26 @@ class DatabaseSeeder extends Seeder
         ]
     ]);
 
+    // For Access Client page 
+        DB::table('user_clients')->insert([
+        [ 
+            'name' => 'Admin Client',
+            'email' => 'adminclient@gmail.com',
+            'password' => bcrypt('adminclient@123'),
+            'role_id' => 2,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+        [ 
+            'name' => 'Tra',
+            'email' => 'tra123@gmail.com',
+            'password' => bcrypt('tra@123'),
+            'role_id' => 3,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+    ]);
+
         // Gender
         DB::table('genders')->insert([
             ['name' => 'Male', 'created_at' => now(), 'updated_at' => now()],
@@ -53,6 +74,5 @@ class DatabaseSeeder extends Seeder
         ['order_type' => 'Take Away', 'note' => 'Customer picks up order'],
         ['order_type' => 'Delivery', 'note' => 'Deliver to customer address'],
     ]);
-
     }
 }

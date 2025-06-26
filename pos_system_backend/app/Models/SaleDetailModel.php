@@ -19,4 +19,8 @@ class SaleDetailModel extends Model
             return $this->belongsTo(OrderTypeModel::class, 'order_type_id');
         }
 
+    public function product() {
+            return $this->belongsTo(ProductModel::class);
+        }
+
 }

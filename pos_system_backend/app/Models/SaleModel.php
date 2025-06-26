@@ -19,9 +19,17 @@ class SaleModel extends Model
             return $this->belongsTo(User::class, 'sale_by');
         }
 
+        public function userClient()
+        {
+            return $this->belongsTo(UserClientModel::class, 'order_by');
+        }
+
     public function details()
         {
             return $this->hasMany(SaleDetailModel::class, 'sale_id');
         }
+    
+        
+
 
 }

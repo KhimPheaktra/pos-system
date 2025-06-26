@@ -1,0 +1,27 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class EmployeeModel extends Model
+{
+    use HasFactory;
+
+    protected $table = 'employees';
+
+    protected $fillable = ['id','first_name','last_name','gender_id','dob','pob','salary','image','status','position_id'];
+
+    public function gender(){
+        return $this->belongsTo(GenderModel::class);
+    }
+    public function province(){
+        return $this->belongsTo(ProvinceModel::class,'pob');
+    }
+
+    public function position(){
+        return $this->belongsTo(PositionModel::class);
+    }
+
+}

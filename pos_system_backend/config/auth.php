@@ -17,6 +17,8 @@ return [
         'guard' => 'web',
         'passwords' => 'users',
     ],
+    
+
 
     /*
     |--------------------------------------------------------------------------
@@ -39,6 +41,14 @@ return [
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+        ],
+          'api' => [
+            'driver' => 'sanctum',
+            'provider' => 'users',
+        ],
+        'client' => [
+            'driver' => 'sanctum',
+            'provider' => 'user_clients',
         ],
     ],
 
@@ -63,6 +73,10 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => App\Models\User::class,
+        ],
+         'user_clients' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\UserClientModel::class,
         ],
 
         // 'users' => [

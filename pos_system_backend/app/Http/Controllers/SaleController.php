@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\EmployeeShiftModel;
 use App\Models\ExchangeRateModel;
 use App\Models\ProductModel;
 use App\Models\SaleDetailModel;
@@ -14,11 +15,27 @@ use PhpParser\Node\Expr\Empty_;
 class SaleController extends Controller
 {
     //
+    public function __construct()
+    {
+        $this->middleware('auth:sanctum');
+    }
 
-   protected function list()
+    public function listForClient(Request $request)
     {
         try {
-            $sales = SaleModel::with(['user', 'details.orderType'])->get(); // eager load relationships
+            $client = $request->user('client');
+
+            if (!$client) {
+                return response()->json(['message' => 'Unauthorized'], 401);
+            }
+
+            $sales = SaleModel::where('order_by', $client->id)
+                ->with(['details.orderType', 'user', 'userClient'])
+                ->get();
+
+            if ($sales->isEmpty()) {
+                return response()->json(['message' => 'No sales found.'], 404);
+            }
 
             $data = [];
 
@@ -28,6 +45,52 @@ class SaleController extends Controller
                         'sale_id' => $sale->id,
                         'sale_date' => $sale->sale_date,
                         'sale_by' => $sale->user ? $sale->user->name : null,
+                        'order_by' => $sale->userClient ? $sale->userClient->name : null,
+                        'product_id' => $detail->product_id,
+                        'qty' => $detail->qty,
+                        'price' => $detail->price,
+                        'total_price_usd' => $detail->total_price_usd,
+                        'total_price_riel' => $detail->total_price_riel,
+                        'discount' => $detail->discount,
+                        'order_type' => $detail->orderType ? $detail->orderType->order_type : null,
+                        'status' => $detail->status,
+                        'amount_take_usd' => $detail->amount_take_usd,
+                        'amount_take_riel' => $detail->amount_take_riel,
+                        'amount_change_usd' => $detail->amount_change_usd,
+                        'amount_change_riel' => $detail->amount_change_riel,
+                    ];
+                }
+            }
+
+            return response()->json([
+                'message' => 'Sales retrieved successfully.',
+                'data' => $data,
+            ]);
+        } catch (\Throwable $e) {
+
+            return response()->json([
+                'message' => 'Something went wrong while fetching sales.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+
+   public function list()
+    {
+        try {
+            $sales = SaleModel::with(['user','userClient', 'details.orderType'])->get(); // eager load relationships
+
+            $data = [];
+
+            foreach ($sales as $sale) {
+                foreach ($sale->details as $detail) {
+                    $data[] = [
+                        'sale_id' => $sale->id,
+                        'sale_date' => $sale->sale_date,
+                        'sale_by' => $sale->user ? $sale->user->name : null,
+                        'order_by' => $sale->userClient ? $sale->userClient->name : null,
                         'product_id' => $detail->product_id,
                         'qty' => $detail->qty,
                         'price' => $detail->price,
@@ -56,7 +119,7 @@ class SaleController extends Controller
             }
 
           
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error get sale: ' . $e->getMessage());
 
             return response()->json([
@@ -66,9 +129,9 @@ class SaleController extends Controller
         }
     }
 
-    protected function getById($id){
+    public function getById($id){
           try {
-            $sale = SaleModel::with(['user', 'details.orderType'])->findOrFail($id);
+            $sale = SaleModel::with(['user','userClient', 'details.orderType'])->findOrFail($id);
 
             $data = [];
                 foreach ($sale->details as $detail) {
@@ -76,6 +139,7 @@ class SaleController extends Controller
                         'sale_id' => $sale->id,
                         'sale_date' => $sale->sale_date,
                         'sale_by' => $sale->user ? $sale->user->name : null,
+                        'order_by' => $sale->userClient ? $sale->userClient->name : null,
                         'product_id' => $detail->product_id,
                         'qty' => $detail->qty,
                         'price' => $detail->price,
@@ -101,7 +165,7 @@ class SaleController extends Controller
                         ], 404);
                     }
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error get sale by id: ' . $e->getMessage());
 
             return response()->json([
@@ -112,11 +176,13 @@ class SaleController extends Controller
     }
 
 
-    protected function add(Request $request)
+    public function add(Request $request)
     {
+
         $request->validate([
             'sale_date' => 'required|date',
             'sale_by' => 'nullable|exists:users,id',
+            'order_by' => 'nullable|exists:user_client,id',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.qty' => 'required|numeric|min:0.01',
@@ -137,11 +203,22 @@ class SaleController extends Controller
             ->value('rate') ?? 0;
 
         DB::beginTransaction();
+            //  Check if the user's shift is currently active
+        $activeShift = EmployeeShiftModel::where('start_by', $request->sale_by)
+            ->whereNull('end_at')
+            ->first();
+
+        if (!$activeShift) {
+            return response()->json([
+                'message' => 'Your shift is not started. Please start your shift first.'
+            ], 403);
+        }
 
         try {
             $sale = SaleModel::create([
-                'sale_date' => $request->sale_date,
-                'sale_by' => $request->sale_by
+                'sale_date' => now(),
+                'sale_by' => $request->sale_by,
+                'order_by' => $request->order_by
             ]);
 
             $totalSaleDiscount = 0;
@@ -189,17 +266,7 @@ class SaleController extends Controller
 
 
                 // Calculate totals and discounts
-                // $totalBeforeDiscount = $price * $qty;
-                // $discountAmount = ($totalBeforeDiscount * $productDiscount) / 100;
-                // $totalAfterDiscount = $totalBeforeDiscount - $discountAmount;
-
-                // $totalSaleDiscount += $discountAmount;
-                // $grandTotalUsd += $totalAfterDiscount;
-
-                // $totalPriceUsd = round($totalAfterDiscount, 2);
-                // $totalPriceRiel = round($totalPriceUsd * $rate, 2);
-                // Calculate totals and discounts
-                   $totalBeforeDiscount = $priceToUse * $qty;
+                    $totalBeforeDiscount = $priceToUse * $qty;
                     $discountAmount = ($totalBeforeDiscount * $productDiscount) / 100;
                     $totalAfterDiscount = $totalBeforeDiscount - $discountAmount;
 
@@ -210,7 +277,7 @@ class SaleController extends Controller
                     $amountTakeUsd = (float) ($item['amount_take_usd'] ?? 0);
                     $amountTakeRiel = (float) ($item['amount_take_riel'] ?? 0);
 
-                    // ✅ Always calculate both USD and Riel change
+                    // Calculate both USD and Riel change
                     $amountChangeUsd = max(0, $amountTakeUsd - $totalPriceUsd);
                     $amountChangeRiel = max(0, $amountTakeRiel - $totalPriceRiel);
 
@@ -238,14 +305,14 @@ class SaleController extends Controller
             }
 
         
-        // $sale->update([
-        //     'total_discount_usd' => round($totalSaleDiscount, 2),
-        //     'grand_total_usd' => round($grandTotalUsd, 2),
-        // ]);
+            // $sale->update([
+            //     'total_discount_usd' => round($totalSaleDiscount, 2),
+            //     'grand_total_usd' => round($grandTotalUsd, 2),
+            // ]);
 
             DB::commit();
 
-            $sale->load(['user', 'details.orderType']);
+            $sale->load(['user','userClient' ,'details.orderType']);
 
             $data = [];
             foreach ($sale->details as $detail) {
@@ -253,6 +320,7 @@ class SaleController extends Controller
                     'sale_id' => $sale->id,
                     'sale_date' => $sale->sale_date,
                     'sale_by' => $sale->user ? $sale->user->name : null,
+                    'order_by' => $sale->userClient ? $sale->userClient->name : null,
                     'product_id' => $detail->product_id,
                     'qty' => $detail->qty,
                     'price' => $detail->price,
@@ -283,7 +351,7 @@ class SaleController extends Controller
                 ], 404);
             }
           
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollback();
 
             return response()->json([
@@ -293,13 +361,14 @@ class SaleController extends Controller
         }
     }
 
-    protected function update(Request $request, $id)
+    public function update(Request $request, $id)
     {
         $sale = SaleModel::findOrFail($id);
 
         $request->validate([
             'sale_date' => 'required|date',
             'sale_by' => 'nullable|exists:users,id',
+            'order_by' => 'nullable|exists:user_client,id',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.qty' => 'required|numeric|min:0.01',
@@ -321,10 +390,11 @@ class SaleController extends Controller
         DB::beginTransaction();
 
         try {
-            // Update sale (same ID, not creating new one)
+            // Update sale 
             $sale->update([
                 'sale_date' => $request->sale_date,
-                'sale_by' => $request->sale_by
+                'sale_by' => $request->sale_by,
+                'order_by' => $request->order_by,
             ]);
 
             // Optional: restore old stock
@@ -411,6 +481,7 @@ class SaleController extends Controller
                     'sale_id' => $sale->id,
                     'sale_date' => $sale->sale_date,
                     'sale_by' => $sale->user ? $sale->user->name : null,
+                    'order_by' => 'nullable|exists:user_client,id',
                     'product_id' => $detail->product_id,
                     'qty' => $detail->qty,
                     'price' => $detail->price,
@@ -433,7 +504,7 @@ class SaleController extends Controller
                 'grand_total_usd' => round($grandTotalUsd, 2),
                 'exchange_rate' => $rate
             ], 200);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
 
             return response()->json([
@@ -444,7 +515,7 @@ class SaleController extends Controller
     }
 
 
-    protected function delete($id){
+    public function delete($id){
         try{
             $sale = SaleModel::findOrFail($id);
             $sale->delete();
@@ -452,7 +523,7 @@ class SaleController extends Controller
                 'message' => 'Sale deleted successfully',
             ],200);
         }
-        catch(\Exception $e){
+        catch(\Throwable $e){
             return response()->json([
                 'message' => 'Faild to deleted sale'
             ],500);

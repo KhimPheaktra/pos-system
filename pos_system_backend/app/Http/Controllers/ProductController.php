@@ -14,14 +14,32 @@ use Illuminate\Validation\Rule;
 class ProductController extends Controller
 {
     //
+    public function __construct()
+    {
+        $this->middleware('auth:sanctum');
+    }
 
-    protected function list(){
+
+    public function list(){
+        $product = ProductModel::with('category')->get();
         try{
-             $product = ProductModel::all();
             if (!empty($product)) {
             return response()->json([
             'message' => 'Products retrieved successfully.',
-            'data' => $product
+             'products' => $product->map(function ($product) {
+                    return [
+                        'id' => $product->id,
+                        'code' => $product->code,
+                        'name' => $product->name,
+                        'price' => $product->price,
+                        'discount' => $product->discount,
+                        'price_after_discount' => $product->price_after_discount,
+                        'current_qty' => $product->current_qty,
+                        'category' => $product->category ? $product->category->name : null,
+                        'description' => $product->description,
+                        'image' => $product->image,
+                    ];
+                }),
         ], 200);
         }
         else{
@@ -30,7 +48,7 @@ class ProductController extends Controller
             ], 404);
         }
         }
-        catch(\Exception $e){
+        catch(\Throwable $e){
             Log::error('Error get product: ' . $e->getMessage());
 
         return response()->json([
@@ -40,13 +58,24 @@ class ProductController extends Controller
         }
     } 
 
-    protected function getById($id){
+    public function getById($id){
           try{
             $product = ProductModel::findOrFail($id);
             if(!empty($product)){
                 return response()->json([
                 'message' => 'Products retrieved successfully.',
-                'data' => $product
+                'product' => [
+                    'id' => $product->id,
+                    'code' => $product->code,
+                    'name' => $product->name,
+                    'price' => $product->price,
+                    'discount' => $product->discount,
+                    'price_after_discount' => $product->price_after_discount,
+                    'current_qty' => $product->current_qty,
+                    'category' => $product->category ? $product->category->name : null,
+                    'description' => $product->description,
+                    'image' => $product->image,
+                ]
             ], 200);
             }
           else{
@@ -55,7 +84,7 @@ class ProductController extends Controller
             ], 404);
           }
         }
-        catch(\Exception $e){
+        catch(\Throwable $e){
             Log::error('Error get product by id: ' . $e->getMessage());
 
         return response()->json([
@@ -67,48 +96,47 @@ class ProductController extends Controller
         
     }
 
-    public function category()
-    {
-        // return $this->belongsTo(CategoryModel::class);
-
-        try{
-            $product = ProductModel::all();
-            $product = ProductModel::with('category')->find($product->id);
-            if(!empty($product)){
-                 return response()->json([
-                'message' => 'Success',
-                'product' => [
-                    'id' => $product->id,
-                    'code' => $product->code,
-                    'name' => $product->name,
-                    'price' => $product->price,
-                    'discount' => $product->discount,
-                    'current_qty' => $product->current_qty,
-                    'category' => $product->category ? $product->category->name : null,
-                    'description' => $product->description,
-                    'image' => $product->image,
-        ]
-            ],201);
-            }
-           else{
-               return response()->json([
-                'message' => 'No data found '
-            ], 404);
-           }
-        }
+    // public function category()
+    // {
+    //     // return $this->belongsTo(CategoryModel::class);
+    //     $product = ProductModel::all();
+    //     $product = ProductModel::with('category')->find($product->id);
+    //     try{
+    //         if(!empty($product)){
+    //              return response()->json([
+    //             'message' => 'Success',
+    //             'product' => [
+    //                 'id' => $product->id,
+    //                 'code' => $product->code,
+    //                 'name' => $product->name,
+    //                 'price' => $product->price,
+    //                 'discount' => $product->discount,
+    //                 'current_qty' => $product->current_qty,
+    //                 'category' => $product->category ? $product->category->name : null,
+    //                 'description' => $product->description,
+    //                 'image' => $product->image,
+    //     ]
+    //         ],201);
+    //         }
+    //        else{
+    //            return response()->json([
+    //             'message' => 'No data found '
+    //         ], 404);
+    //        }
+    //     }
         
-        catch(\Exception $e){
-            Log::error('Error get product: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Something when wrong.',
-                'error' => $e->getMessage()
-            ],500);
-        }
+    //     catch(\Throwable $e){
+    //         Log::error('Error get product: ' . $e->getMessage());
+    //         return response()->json([
+    //             'message' => 'Something when wrong.',
+    //             'error' => $e->getMessage()
+    //         ],500);
+    //     }
         
-    }
+    // }
 
 
-    protected function add(Request $request){
+    public function add(Request $request){
         $request->validate([
         'code' => 'nullable|string|max:255',
         'name' => 'required|string|max:255',
@@ -184,7 +212,7 @@ class ProductController extends Controller
             ], 500);
             }
         }
-        catch(\Exception $e){
+        catch(\Throwable $e){
             Log::error('Error adding product: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Something when wrong.',
@@ -193,7 +221,7 @@ class ProductController extends Controller
         }
     }
 
-    protected function update(Request $request, $id)
+    public function update(Request $request, $id)
     {
         $product = ProductModel::findOrFail($id);
 
@@ -285,7 +313,7 @@ class ProductController extends Controller
             ], 500);
             }
           
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'message' => 'Product update failed.',
                 'error' => $e->getMessage()
@@ -293,7 +321,7 @@ class ProductController extends Controller
         }
     }
 
-    protected function delete($id)
+    public function delete($id)
     {
         try {
             $product = ProductModel::findOrFail($id);
@@ -302,7 +330,7 @@ class ProductController extends Controller
             return response()->json([
                 'message' => 'Product deleted successfully'
             ], 200);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'message' => 'Delete failed.',
                 'error' => $e->getMessage()

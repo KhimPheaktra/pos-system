@@ -17,6 +17,10 @@ return new class extends Migration
             $table->foreignId('sale_by')->nullable() // if client buy in store show the user id that sale to client and if client buy from web or online dont show 
             ->constrained('users')
             ->onDelete('cascade');
+            $table->foreignId('order_by')
+            ->nullable()
+            ->constrained('user_client')
+            ->onDelete('cascade');
  
             $table->timestamps();
           

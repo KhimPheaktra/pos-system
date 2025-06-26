@@ -1,17 +1,16 @@
 <?php
-
 namespace App\Models;
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 
-class User extends Authenticatable
+class UserClientModel extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
-  
+
+    protected $table = 'user_clients';
     /**
      * The attributes that are mass assignable.
      *
@@ -26,7 +25,7 @@ class User extends Authenticatable
         'is_active'
     ];
 
-    public function role()
+      public function role()
     {
         return $this->belongsTo(RoleModel::class);
     }
