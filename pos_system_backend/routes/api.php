@@ -39,20 +39,29 @@ Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
 Route::post('login',[AuthController::class,'login']);
 Route::middleware('auth:sanctum')->post('register',[AuthController::class,'registerStaff']);
 Route::middleware('auth:sanctum')->post('account/staff/update/{id}',[AuthController::class,'update']);
-Route::post('logout',[AuthController::class,'logout']);
+Route::post('staff/refresh-token', [AuthController::class, 'refreshToken']);
+Route::middleware('auth:sanctum')->post('logout',[AuthController::class,'logout']);
 
 // Client Auth
-Route::post('login/client',[ClientAuthController::class,'login']);
-Route::post('register/client',[ClientAuthController::class,'registerClient']);
+Route::post('client/login',[ClientAuthController::class,'login']);
+Route::post('client/register',[ClientAuthController::class,'registerClient']);
 Route::middleware('auth:sanctum')->post('account/client/update/{id}',[ClientAuthController::class,'update']);
-Route::post('logout/client',[ClientAuthController::class,'logout']);
+Route::post('client/refresh-token', [ClientAuthController::class, 'refreshToken']);
+Route::middleware('auth:sanctum')->post('client/logout',[ClientAuthController::class,'logout']);
 
 // Routes accessible only by user clients
 Route::middleware(['auth:client', 'verified'])->group(function () {
+    // List Product
     Route::get('client/product', [ProductController::class, 'list']);
+    // List Category
     Route::get('client/category', [CategoryController::class, 'list']);
+    // List sale client and client order action
     Route::get('saleClient/list', [ClientController::class, 'listForClient']); 
     Route::post('saleClient/add', [ClientController::class, 'add']);
+    Route::post('saleClient/cancel', [ClientController::class, 'cancelOrder']);
+    Route::post('saleClient/confirm/{id}', [ClientController::class, 'confirmReceived']);
+
+
 });
 
 
@@ -78,6 +87,9 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('sale/add', [SaleController::class, 'add']);
     Route::post('sale/update/{id}', [SaleController::class, 'update']);
     Route::delete('sale/delete/{id}', [SaleController::class, 'delete']);
+    Route::post('sale/update/status/{id}', [SaleController::class, 'updateStatus']);
+    Route::post('sale/update/status', [SaleController::class, 'updateStatusBatch']);
+
 
     // Position
     Route::get('position',[PositionController::class ,'list']);

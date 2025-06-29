@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Models\RefreshTokenModel;
 use App\Models\User;
 use App\Models\UserLoginLogoutInfoModel;
 use Illuminate\Http\Request;
@@ -11,40 +12,34 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cookie;
 
 class AuthController extends Controller
 {
-    //
-  public function login(LoginRequest $request)
+  
+
+    public function login(LoginRequest $request)
     {
-        try{
+        try {
             $credentials = $request->validated();
 
-            // Attempt to login with the 'web' guard
             if (!Auth::guard('web')->attempt($credentials)) {
-                return response()->json([
-                    'message' => 'Email or password are wrong.'
-                ], 401);
+                return response()->json(['message' => 'Email or password are wrong.'], 401);
             }
-
-              /** @var \App\Models\User $user **/
-            // Retrieve the authenticated user
+               /** @var \App\Models\User $user **/
             $user = Auth::guard('web')->user();
 
-            // for accounts got banned
+            // For account got banned
             if ($user->status === 'BAN') {
-                return response()->json([
-                    'message' => 'Your account has been banned due to policy violations. Please contact admin.'
-                ], 403);
+                return response()->json(['message' => 'Your account has been banned.'], 403);
             }
 
-            // for deleted accounts 
+            // For account got deleted
             if ($user->status === 'DEL') {
-                return response()->json([
-                    'message' => 'Your account has been deleted. Please contact admin if this is a mistake.'
-                ], 403);
+                return response()->json(['message' => 'Your account has been deleted.'], 403);
             }
-            // Mark user as active
+
             $user->is_active = 1;
             $user->save();
 
@@ -56,24 +51,74 @@ class AuthController extends Controller
                 'logout_at' => null,
             ]);
 
-            // Create Sanctum token valid for 24 hours
-            $tokenResult = $user->createToken('api-token', ['*'], now()->addHours(24));
-            $token = $tokenResult->plainTextToken;
+            // Create access token 
+            $tokenResult = $user->createToken('api-token', ['*']);
+            $token = $tokenResult->accessToken; 
+
+            // Set token expiration 24 hours from now
+            $token->expires_at = now()->addMinutes(15);
+            $token->save();
+
+            $accessToken = $tokenResult->plainTextToken;
+
+            // Create refresh token valid for 7 days 
+            $refreshTokenString = hash('sha256', Str::random(64));
+
+            $user->refreshTokens()->create([
+                'token' => $refreshTokenString,
+                'expires_at' => now()->addDays(7),
+            ]);
+
+            // Set refresh token in HttpOnly cookie
+            $cookie = cookie('refresh_token', $refreshTokenString, 60 * 24 * 7, null, null, true, true, false, 'Strict');
 
             return response()->json([
                 'user' => $user,
-                'token' => $token,
-            ], 200);
-        }
-        catch(\Throwable $e){
-              return response()->json([
+                'token' => $accessToken,
+                'expires_at' => $token->expires_at->toDateTimeString(),
+            ], 200)->cookie($cookie);
+
+        } catch (\Throwable $e) {
+            return response()->json([
                 'message' => 'Login failed. Please try again later.',
                 'error' => $e->getMessage()
             ], 500);
         }
-        
     }
 
+    public function refreshToken(Request $request)
+    {
+        $refreshToken = $request->cookie('refresh_token');
+        if (!$refreshToken) {
+            return response()->json(['message' => 'Refresh token not found.'], 401);
+        }
+
+        $tokenRecord = RefreshTokenModel::where('token', $refreshToken)->first();
+
+        if (!$tokenRecord || $tokenRecord->isExpired()) {
+            return response()->json(['message' => 'Refresh token is invalid or expired.'], 401);
+        }
+
+        $user = $tokenRecord->user;
+        $user->tokens()->delete();
+
+        // Issue new access token
+        $tokenResult = $user->createToken('api-token', ['*'], now()->addHours(24));
+        $accessToken = $tokenResult->plainTextToken;
+
+        // Refresh token
+        $newRefreshTokenString = hash('sha256', Str::random(64));
+        $tokenRecord->update([
+            'token' => $newRefreshTokenString,
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        $cookie = cookie('refresh_token', $newRefreshTokenString, 60 * 24 * 7, null, null, true, true, false, 'Strict');
+
+        return response()->json([
+            'token' => $accessToken,
+        ])->cookie($cookie);
+    }
 
 
     public function registerStaff(RegisterRequest $request)
@@ -86,14 +131,12 @@ class AuthController extends Controller
                 return response()->json(['message' => 'Unauthorized'], 401);
             }
 
-            $user->load('role'); // eager load the role relation
-
+            $user->load('role');
             $userRole = $user->role?->name;
 
             if (!in_array($userRole, $allowedRoles)) {
                 return response()->json(['message' => 'Forbidden'], 403);
             }
-
 
             if ($request->hasFile('image')) {
                 $imagePath = $request->file('image')->store('staff_images', 'public');
@@ -133,32 +176,44 @@ class AuthController extends Controller
         }
 
 
-   public function logout(Request $request) {
-    try {
-        $user = $request->user();
+   public function logout(Request $request)
+    {
+        try {
+            $user = $request->user();
+
             if (!$user) {
                 return response()->json(['message' => 'Unauthorized'], 401);
             }
+
             // Mark user as inactive
             $user->is_active = 0;
             $user->save();
-            UserLoginLogoutInfoModel::where('user_id', Auth::id())
+
+            UserLoginLogoutInfoModel::where('user_id', $user->id)
                 ->whereNull('logout_at')
                 ->latest() // get the most recent login
                 ->first()
                 ?->update(['logout_at' => now()]);
 
-
+            // Delete current access token
             $token = $user->currentAccessToken();
             if ($token) {
                 $token->delete();
             }
-            return response('', 204);
+
+            // Delete all refresh tokens for user
+            $user->refreshTokens()->delete();
+
+            // Clear the refresh_token cookie by sending an expired cookie
+            $cookie = cookie()->forget('refresh_token');
+
+            return response()->json([
+                'message' => 'Logout succeed'
+            ], 204)->cookie($cookie);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-
 
     // Update 
     public function update(RegisterRequest $request,$id){
@@ -181,7 +236,7 @@ class AuthController extends Controller
                 return response()->json(['message' => 'Unauthorized'], 401);
             }
 
-            $user->load('role'); // eager load the role relation
+            $user->load('role'); 
 
             $userRole = $user->role?->name;
 
@@ -225,7 +280,6 @@ class AuthController extends Controller
         }
         
     }
-
     
 
 }

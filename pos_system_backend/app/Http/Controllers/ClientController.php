@@ -83,6 +83,7 @@ class ClientController extends Controller
             'sale_date' => 'required|date',
             'sale_by' => 'nullable|exists:users,id',
             'order_by' => 'nullable|exists:user_client,id',
+            'status' => 'required|in:PENDING,PROCESSING,ON_THE_WAY,COMPLETE,CANCEL',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.qty' => 'required|numeric|min:0.01',
@@ -111,6 +112,7 @@ class ClientController extends Controller
                 'sale_date' => now(),
                 'sale_by' => null,
                 'order_by' => Auth::id(),
+                'status' => 'PENDING',
             ]);
 
             $totalSaleDiscount = 0;
@@ -187,7 +189,6 @@ class ClientController extends Controller
                     'total_price_riel' => $totalPriceRiel,
                     'discount' => $productDiscount,
                     'order_type_id' => $item['order_type_id'],
-                    'status' => $item['status'] ?? 'on_the_way',
                     'amount_take_usd' => $amountTakeUsd,
                     'amount_take_riel' => $amountTakeRiel,
                     'amount_change_usd' => $amountChangeUsd,
@@ -217,6 +218,7 @@ class ClientController extends Controller
                     'sale_date' => $sale->sale_date,
                     'sale_by' => $sale->user ? $sale->user->name : null,
                     'order_by' => $sale->userClient ? $sale->userClient->name : null,
+                    'status' => $sale->status,
                     'product_id' => $detail->product_id,
                     'qty' => $detail->qty,
                     'price' => $detail->price,
@@ -224,7 +226,6 @@ class ClientController extends Controller
                     'total_price_riel' => $detail->total_price_riel,
                     'discount' => $detail->discount,
                     'order_type' => $detail->orderType ? $detail->orderType->order_type : null,
-                    'status' => $detail->status,
                     'amount_take_usd' => $detail->amount_take_usd,
                     'amount_take_riel' => $detail->amount_take_riel,
                     'amount_change_usd' => $detail->amount_change_usd,
@@ -265,13 +266,13 @@ class ClientController extends Controller
             'sale_date' => 'required|date',
             'sale_by' => 'nullable|exists:users,id',
             'order_by' => 'nullable|exists:user_client,id',
+            'status' => 'required|in:PENDING,PROCESSING,ON_THE_WAY,COMPLETE,CANCEL',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.qty' => 'required|numeric|min:0.01',
             'items.*.price' => 'nullable|numeric|min:0',
             'items.*.discount' => 'nullable|numeric|min:0',
             'items.*.order_type_id' => 'required|exists:order_type,id',
-            'items.*.status' => 'nullable|string',
             'items.*.amount_take_usd' => 'nullable|numeric',
             'items.*.amount_take_riel' => 'nullable|numeric',
             'items.*.amount_change_usd' => 'nullable|numeric',
@@ -291,6 +292,8 @@ class ClientController extends Controller
                 'sale_date' => $request->sale_date,
                 'sale_by' => $request->sale_by,
                 'order_by' => $request->order_by,
+                'status' => $request->status,
+
             ]);
 
             // Optional: restore old stock
@@ -359,7 +362,6 @@ class ClientController extends Controller
                     'total_price_riel' => $totalPriceRiel,
                     'discount' => $productDiscount,
                     'order_type_id' => $item['order_type_id'],
-                    'status' => $item['status'] ?? null,
                     'amount_take_usd' => $amountTakeUsd,
                     'amount_take_riel' => $amountTakeRiel,
                     'amount_change_usd' => $amountChangeUsd,
@@ -378,6 +380,7 @@ class ClientController extends Controller
                     'sale_date' => $sale->sale_date,
                     'sale_by' => $sale->user ? $sale->user->name : null,
                     'order_by' => 'nullable|exists:user_client,id',
+                    'status' => $sale->status,
                     'product_id' => $detail->product_id,
                     'qty' => $detail->qty,
                     'price' => $detail->price,
@@ -385,7 +388,6 @@ class ClientController extends Controller
                     'total_price_riel' => $detail->total_price_riel,
                     'discount' => $detail->discount,
                     'order_type' => $detail->orderType ? $detail->orderType->order_type : null,
-                    'status' => $detail->status,
                     'amount_take_usd' => $detail->amount_take_usd,
                     'amount_take_riel' => $detail->amount_take_riel,
                     'amount_change_usd' => $detail->amount_change_usd,
@@ -409,4 +411,62 @@ class ClientController extends Controller
             ], 500);
         }
     }
+
+    public function confirmReceived(Request $request, $id)
+    {
+        $client = $request->user('client');
+
+        $sale = SaleModel::where('id', $id)->where('order_by', $client->id)->first();
+
+        if (!$sale) {
+            return response()->json(['message' => 'Unauthorized or sale not found'], 403);
+        }
+
+        if ($sale->status !== 'ON_THE_WAY') {
+            return response()->json(['message' => 'Order is not on the way yet.'], 400);
+        }
+
+        $sale->status = 'COMPLETE';
+        $sale->save();
+
+        return response()->json(['message' => 'Thank you! Order marked as received.']);
+    }
+
+
+
+    public function cancelOrder($id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $sale = SaleModel::with('details')->findOrFail($id);
+
+            // Restore stock quantities before deletion
+            foreach ($sale->details as $detail) {
+                $product = ProductModel::find($detail->product_id);
+                if ($product) {
+                    $product->current_qty += $detail->qty;
+                    $product->save();
+                }
+            }
+
+            $sale->status = 'CANCEL';
+            $sale->save();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Order canceled successfully',
+            ], 200);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to cancel order',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
 }

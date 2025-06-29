@@ -11,7 +11,7 @@ class SaleModel extends Model
 
     protected $table = 'sales';
 
-    protected $fillable = ['id','sale_date','sale_by','order_by'];
+    protected $fillable = ['id','sale_date','sale_by','order_by','status'];
 
 
     public function user()

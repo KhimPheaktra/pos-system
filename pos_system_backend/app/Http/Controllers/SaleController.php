@@ -36,6 +36,7 @@ class SaleController extends Controller
                         'sale_date' => $sale->sale_date,
                         'sale_by' => $sale->user ? $sale->user->name : null,
                         'order_by' => $sale->userClient ? $sale->userClient->name : null,
+                        'status' => $sale->status,
                         'product_id' => $detail->product_id,
                         'qty' => $detail->qty,
                         'price' => $detail->price,
@@ -43,7 +44,6 @@ class SaleController extends Controller
                         'total_price_riel' => $detail->total_price_riel,
                         'discount' => $detail->discount,
                         'order_type' => $detail->orderType ? $detail->orderType->order_type : null,
-                        'status' => $detail->status,
                         'amount_take_usd' => $detail->amount_take_usd,
                         'amount_take_riel' => $detail->amount_take_riel,
                         'amount_change_usd' => $detail->amount_change_usd,
@@ -85,6 +85,7 @@ class SaleController extends Controller
                         'sale_date' => $sale->sale_date,
                         'sale_by' => $sale->user ? $sale->user->name : null,
                         'order_by' => $sale->userClient ? $sale->userClient->name : null,
+                        'status' => $sale->status,
                         'product_id' => $detail->product_id,
                         'qty' => $detail->qty,
                         'price' => $detail->price,
@@ -92,7 +93,6 @@ class SaleController extends Controller
                         'total_price_riel' => $detail->total_price_riel,
                         'discount' => $detail->discount,
                         'order_type' => $detail->orderType ? $detail->orderType->order_type : null,
-                        'status' => $detail->status,
                         'amount_take_usd' => $detail->amount_take_usd,
                         'amount_take_riel' => $detail->amount_take_riel,
                         'amount_change_usd' => $detail->amount_change_usd,
@@ -128,13 +128,13 @@ class SaleController extends Controller
             'sale_date' => 'required|date',
             'sale_by' => 'nullable|exists:users,id',
             'order_by' => 'nullable|exists:user_client,id',
+            'status' => 'required|in:PENDING,PROCESSING,ON_THE_WAY,COMPLETE,CANCEL',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.qty' => 'required|numeric|min:0.01',
             'items.*.price' => 'nullable|numeric|min:0', // Add this if not present
             'items.*.discount' => 'nullable|numeric|min:0',
             'items.*.order_type_id' => 'required|exists:order_type,id',
-            'items.*.status' => 'nullable|string',
             'items.*.amount_take_usd' => 'nullable|numeric',
             'items.*.amount_take_riel' => 'nullable|numeric',
             'items.*.amount_change_usd' => 'nullable|numeric',
@@ -164,6 +164,7 @@ class SaleController extends Controller
                 'sale_date' => now(),
                 'sale_by' => Auth::id(),
                 'order_by' => $request->order_by ?? auth()->id(),
+                'status' => $item['status'] ?? 'COMPLETE',
             ]);
 
             $totalSaleDiscount = 0;
@@ -240,7 +241,6 @@ class SaleController extends Controller
                     'total_price_riel' => $totalPriceRiel,
                     'discount' => $productDiscount,
                     'order_type_id' => $item['order_type_id'],
-                    'status' => $item['status'] ?? 'on_the_way',
                     'amount_take_usd' => $amountTakeUsd,
                     'amount_take_riel' => $amountTakeRiel,
                     'amount_change_usd' => $amountChangeUsd,
@@ -260,7 +260,6 @@ class SaleController extends Controller
 
 
             DB::commit();
-
             $sale->load(['user','userClient' ,'details.orderType']);
 
             $data = [];
@@ -270,6 +269,7 @@ class SaleController extends Controller
                     'sale_date' => $sale->sale_date,
                     'sale_by' => $sale->user ? $sale->user->name : null,
                     'order_by' => $sale->userClient ? $sale->userClient->name : null,
+                    'status' => $sale->status,
                     'product_id' => $detail->product_id,
                     'qty' => $detail->qty,
                     'price' => $detail->price,
@@ -277,7 +277,6 @@ class SaleController extends Controller
                     'total_price_riel' => $detail->total_price_riel,
                     'discount' => $detail->discount,
                     'order_type' => $detail->orderType ? $detail->orderType->order_type : null,
-                    'status' => $detail->status,
                     'amount_take_usd' => $detail->amount_take_usd,
                     'amount_take_riel' => $detail->amount_take_riel,
                     'amount_change_usd' => $detail->amount_change_usd,
@@ -318,13 +317,13 @@ class SaleController extends Controller
             'sale_date' => 'required|date',
             'sale_by' => 'nullable|exists:users,id',
             'order_by' => 'nullable|exists:user_client,id',
+            'status' => 'required|in:PENDING,PROCESSING,ON_THE_WAY,COMPLETE,CANCEL',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.qty' => 'required|numeric|min:0.01',
             'items.*.price' => 'nullable|numeric|min:0',
             'items.*.discount' => 'nullable|numeric|min:0',
             'items.*.order_type_id' => 'required|exists:order_type,id',
-            'items.*.status' => 'nullable|string',
             'items.*.amount_take_usd' => 'nullable|numeric',
             'items.*.amount_take_riel' => 'nullable|numeric',
             'items.*.amount_change_usd' => 'nullable|numeric',
@@ -344,9 +343,10 @@ class SaleController extends Controller
                 'sale_date' => $request->sale_date,
                 'sale_by' => $request->sale_by,
                 'order_by' => $request->order_by,
+                'status' => $request->status,
             ]);
 
-            // Optional: restore old stock
+            // Restore old stock
             foreach ($sale->details as $oldDetail) {
                 $product = ProductModel::find($oldDetail->product_id);
                 if ($product) {
@@ -412,7 +412,6 @@ class SaleController extends Controller
                     'total_price_riel' => $totalPriceRiel,
                     'discount' => $productDiscount,
                     'order_type_id' => $item['order_type_id'],
-                    'status' => $item['status'] ?? null,
                     'amount_take_usd' => $amountTakeUsd,
                     'amount_take_riel' => $amountTakeRiel,
                     'amount_change_usd' => $amountChangeUsd,
@@ -431,6 +430,7 @@ class SaleController extends Controller
                     'sale_date' => $sale->sale_date,
                     'sale_by' => $sale->user ? $sale->user->name : null,
                     'order_by' => 'nullable|exists:user_client,id',
+                    'status' => $sale->status,
                     'product_id' => $detail->product_id,
                     'qty' => $detail->qty,
                     'price' => $detail->price,
@@ -438,7 +438,6 @@ class SaleController extends Controller
                     'total_price_riel' => $detail->total_price_riel,
                     'discount' => $detail->discount,
                     'order_type' => $detail->orderType ? $detail->orderType->order_type : null,
-                    'status' => $detail->status,
                     'amount_take_usd' => $detail->amount_take_usd,
                     'amount_take_riel' => $detail->amount_take_riel,
                     'amount_change_usd' => $detail->amount_change_usd,
@@ -463,21 +462,93 @@ class SaleController extends Controller
         }
     }
 
+    // Update 1 order status
 
-    public function delete($id){
+    public function updateStatus(Request $request, $id)
+    {
         try{
+            $request->validate([
+            'status' => 'required|in:PENDING,PROCESSING,ON_THE_WAY,COMPLETE,CANCEL',
+        ]);
+
             $sale = SaleModel::findOrFail($id);
-            $sale->delete();
+            $sale->status = $request->status;
+            $sale->save();
+
             return response()->json([
-                'message' => 'Sale deleted successfully',
-            ],200);
+                'message' => 'Sale status updated',
+                'status' => $sale->status,
+            ]);
         }
         catch(\Throwable $e){
             return response()->json([
-                'message' => 'Faild to deleted sale'
-            ],500);
+                'message' => 'Something when wrong',
+                'error' => $e->getMessage(),
+            ]);
+        }
+        
+    }
+
+      // Update multiple orders status
+
+    public function updateStatusBatch(Request $request)
+    {
+        try{
+              $request->validate([
+                'sale_ids' => 'required|array|min:1',
+                'status' => 'required|in:ON_THE_WAY,COMPLETE,CANCEL',
+        ]);
+
+        SaleModel::whereIn('id', $request->sale_ids)->update(['status' => $request->status]);
+
+        return response()->json(['message' => 'Statuses updated successfully.']);
+        }
+        catch(\Throwable $e){
+             return response()->json([
+                'message' => 'Something when wrong',
+                'error' => $e->getMessage(),
+            ]);
+        }
+      
+    }
+
+    public function delete($id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $sale = SaleModel::with('details')->findOrFail($id);
+
+            // Restore stock quantities before deletion
+            foreach ($sale->details as $detail) {
+                $product = ProductModel::find($detail->product_id);
+                if ($product) {
+                    $product->current_qty += $detail->qty;
+                    $product->save();
+                }
+            }
+
+            // Delete sale details
+            $sale->details()->delete();
+
+            // Delete the sale record
+            $sale->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Sale deleted successfully and stock restored',
+            ], 200);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to delete sale',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
+
 
 
 }

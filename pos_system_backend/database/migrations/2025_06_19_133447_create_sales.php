@@ -21,7 +21,7 @@ return new class extends Migration
             ->nullable()
             ->constrained('user_client')
             ->onDelete('cascade');
- 
+            $table->string('status')->default('PENDING'); 
             $table->timestamps();
           
         });
@@ -42,7 +42,6 @@ return new class extends Migration
             $table->foreignId('order_type_id')
             ->constrained('order_type')
             ->onDelete('cascade');
-            $table->enum('status', ['complete', 'on_the_way', 'cancel'])->default('on_the_way');  //Complete, On the way , Cancel
             $table->decimal('amount_take_usd',10,2)->nullable(); //if client pay in usd bakorn bank or dollor 
             $table->decimal('amount_take_riel',10,2)->nullable(); //if client pay in riel bakorn bank or riel
             $table->decimal('amount_change_usd',10,2)->nullable(); //if client buy in store

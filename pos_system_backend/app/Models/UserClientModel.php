@@ -32,9 +32,14 @@ class UserClientModel extends Authenticatable
     }
 
 
-        public function updateBy()
+    public function updateBy()
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function refreshTokens()
+    {
+        return $this->hasMany(RefreshClientTokenModel::class, 'user_id');
     }
 
     /**

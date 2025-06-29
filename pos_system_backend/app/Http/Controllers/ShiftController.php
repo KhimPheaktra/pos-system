@@ -98,8 +98,6 @@ class ShiftController extends Controller
                 'active_shift_id' => $activeShift->id
             ], 409);
         }
-
-
         try {
             $shift = EmployeeShiftModel::create([
                 'start_by' => $request->start_by,

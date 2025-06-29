@@ -62,9 +62,8 @@ class RoleController extends Controller
                         'status' => $role->status,
                         'created_by' => $role->createBy ? $role->createBy->name : null,
                         'updated_by' => $role->updateBy ? $role->updateBy->name : null,
-
-                ]
-            ],200);
+                    ]
+                ],200);
             }
           
             else{

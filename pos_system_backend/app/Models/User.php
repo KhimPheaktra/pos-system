@@ -42,6 +42,11 @@ class User extends Authenticatable
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+    public function refreshTokens()
+    {
+        return $this->hasMany(RefreshTokenModel::class, 'user_id');
+    }
+
 
 
 
