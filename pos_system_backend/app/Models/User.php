@@ -23,6 +23,8 @@ class User extends Authenticatable
         'password',
         'role_id',
         'image',
+        'created_by',
+        'updated_by',
         'is_active'
     ];
 
@@ -30,6 +32,17 @@ class User extends Authenticatable
     {
         return $this->belongsTo(RoleModel::class);
     }
+
+    public function updateBy()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+     public function createBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
 
 
     /**

@@ -26,6 +26,10 @@ return new class extends Migration
             $table->string('image')->nullable();
             $table->string('status')->default('ACT');
             $table->boolean('is_active')->default(true);
+            $table->foreignId('updated_by')
+            ->nullable()
+            ->constrained('users')
+            ->onDelete('set null');
 
         });
     }

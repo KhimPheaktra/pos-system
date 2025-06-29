@@ -22,7 +22,8 @@ class UserClientModel extends Authenticatable
         'password',
         'role_id',
         'image',
-        'is_active'
+        'is_active',
+        'updated_by',
     ];
 
       public function role()
@@ -30,6 +31,11 @@ class UserClientModel extends Authenticatable
         return $this->belongsTo(RoleModel::class);
     }
 
+
+        public function updateBy()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
 
     /**
      * The attributes that should be hidden for serialization.

@@ -6,7 +6,7 @@ use App\Models\EmployeeModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-
+use Illuminate\Support\Facades\Auth;
 class EmployeeController extends Controller
 {
     //
@@ -16,40 +16,48 @@ class EmployeeController extends Controller
             $this->middleware('auth:sanctum');
         }
 
-    public function list(){
-        $employee = EmployeeModel::where('status','ACT')->get();
+    public function list()
+    {
+        try {
+            $employees = EmployeeModel::where('status', 'ACT')
+                ->with(['gender', 'province', 'position', 'createBy', 'updateBy'])
+                ->get();
 
-        try{
-            if(!empty($employee))
-            return response()->json([
-                'employee' => $employee->map(function ($employee){
-                    return [
-                        'id' => $employee->id,
-                        'first_name' => $employee->first_name,
-                        'last_name' => $employee->last_name,
-                        'gender' => $employee->gender ? $employee->gender->name : null,
-                        'dob' => $employee->dob,
-                        'pob' => $employee->province ? $employee->province->name : null,
-                        'salary' => $employee->salary,
-                        'position' => $employee->position ? $employee->position->name : null,
-                        'image' => $employee->image,
-                    ];
-                })
-            ],200);
-            else{
+            if ($employees->isEmpty()) {
                 return response()->json([
                     'message' => 'No data found'
-                ],404);
+                ], 404);
             }
-        }
-        catch(\Throwable $e){
-            Log::error('Error get employee: ' . $e->getMessage());
-              return response()->json([
-                'message' => 'Something when wrong',
+
+            $data = $employees->map(function ($employee) {
+                return [
+                    'id' => $employee->id,
+                    'first_name' => $employee->first_name,
+                    'last_name' => $employee->last_name,
+                    'gender' => $employee->gender?->name,
+                    'dob' => $employee->dob,
+                    'pob' => $employee->province?->name,
+                    'salary' => $employee->salary,
+                    'position' => $employee->position?->name,
+                    'image' => $employee->image,
+                    'created_by' => $employee->createBy?->name,
+                    'updated_by' => $employee->updateBy?->name,
+                ];
+            });
+
+            return response()->json([
+                'employees' => $data
+            ], 200);
+        } catch (\Throwable $e) {
+            Log::error('Error getting employee: ' . $e->getMessage());
+
+            return response()->json([
+                'message' => 'Something went wrong',
                 'error' => $e->getMessage()
-            ],500);
+            ], 500);
         }
     }
+
 
     public function getById($id){
          $employee = EmployeeModel::where('status', 'ACT')
@@ -68,6 +76,9 @@ class EmployeeController extends Controller
                         'salary' => $employee->salary,
                         'position' => $employee->position ? $employee->position->name : null,
                         'image' => $employee->image,
+                        'created_by' => $employee->createBy ? $employee->createBy->name : null,
+                        'updated_by' => $employee->updateBy ? $employee->updateBy->name : null,
+                        
                     ]
                 
             ],200);
@@ -115,7 +126,8 @@ class EmployeeController extends Controller
                 'image' => $imagePath,
                 'status' => $request->status ?? 'ACT',
                 'position_id' => $request->position_id,
-
+                'created_by' => Auth::id(),
+                'updated_by' => null,
             ]);
               $employee = EmployeeModel::with('gender','pob','position')->find($employee->id);
 
@@ -132,6 +144,8 @@ class EmployeeController extends Controller
                         'salary' => $employee->salary,
                         'position' => $employee->position ? $employee->position->name : null,
                         'image' => $employee->image,
+                        'created_by' => $employee->createBy ? $employee->createBy->name : null,
+                        'updated_by' => $employee->updateBy ? $employee->updateBy->name : null,
                     ]
                 ],200);
               }
@@ -173,6 +187,8 @@ class EmployeeController extends Controller
             $employee->gender_id = $request->gender_id;
             $employee->dob = $request->dob;
             $employee->salary = $request->salary;
+            $employee->created_by = $request->created_by;
+            $employee->updated_by = Auth::id();
             $employee->save();
 
             if(!empty($employee)){
@@ -189,6 +205,8 @@ class EmployeeController extends Controller
                         'salary' => $employee->salary,
                         'position' => $employee->position ? $employee->position->name : null,
                         'image' => $employee->image,
+                        'created_by' => $employee->createBy ? $employee->createBy->name : null,
+                        'updated_by' => $employee->updateBy ? $employee->updateBy->name : null,
                     ]
         
                 ]);
@@ -209,10 +227,13 @@ class EmployeeController extends Controller
 
       public function delete($id){
         try{
-            DB::table('employees')
+            $employee = DB::table('employees')
             ->where('id',$id)
-            ->update(['status' => 'DEL']);
-
+            ->update([
+                'status' => 'DEL',
+                'updated_by' => Auth::id(),
+            ]);
+    
             return response()->json([
                 'message' => 'Employee deleted successfully'
             ],200);

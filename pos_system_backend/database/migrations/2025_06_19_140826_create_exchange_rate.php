@@ -17,6 +17,12 @@ return new class extends Migration
             $table->string('target_currency')->unique(); // 'KHR'
             $table->decimal('rate', 12, 2);    // 4100
             $table->text('note')->nullable();  
+             $table->foreignId('created_by')
+            ->constrained('users')
+            ->onDelete('set null');
+            $table->foreignId('updated_by')
+            ->constrained('users')
+            ->onDelete('set null');
             $table->timestamps();
         });
     }

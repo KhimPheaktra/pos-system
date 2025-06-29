@@ -24,6 +24,14 @@ return new class extends Migration
             ->onDelete('restrict');
             $table->string('image')->nullable();
             $table->string('status')->default('ACT');
+            $table->foreignId('created_by')
+            ->nullable()
+            ->constrained('users')
+            ->onDelete('set null');
+            $table->foreignId('updated_by')
+            ->nullable()
+            ->constrained('users')
+            ->onDelete('set null');
             $table->boolean('is_active')->default(true);
 
         });

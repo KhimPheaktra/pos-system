@@ -24,6 +24,14 @@ return new class extends Migration
             $table->string('image')->nullable();
             $table->text('description')->nullable();
             $table->decimal('current_qty',8,2)->nullable();
+             $table->foreignId('created_by')
+            ->nullable()
+            ->constrained('users')
+            ->onDelete('set null');
+            $table->foreignId('updated_by')
+            ->nullable()
+            ->constrained('users')
+            ->onDelete('set null');
             $table->timestamps();
         });
     }

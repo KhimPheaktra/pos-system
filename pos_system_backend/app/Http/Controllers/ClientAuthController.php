@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
+use App\Models\UserClientLoginLogoutInfoModel;
 use App\Models\UserClientModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -43,6 +44,13 @@ class ClientAuthController extends Controller
             // Mark user as active
             $user->is_active = 1;
             $user->save();
+            UserClientLoginLogoutInfoModel::create([
+                'user_id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'login_at' => now(),
+                'logout_at' => null,
+            ]);
 
             // Create Sanctum token (24 hours expiry)
             $tokenResult = $user->createToken('api-token', ['*'], now()->addHours(48));
@@ -93,6 +101,14 @@ class ClientAuthController extends Controller
             // Mark user as active
             $userClient->is_active = 1;
             $userClient->save();
+ 
+            UserClientLoginLogoutInfoModel::create([
+                'user_id' => Auth::id(),
+                'name' => $userClient->name,
+                'email' => $userClient->email,
+                'login_at' => now(),
+                'logout_at' => null,
+            ]);
 
             return response()->json([
                 'message' => 'Registered successfully',
@@ -119,6 +135,12 @@ class ClientAuthController extends Controller
         // Mark user as inactive
         $userClient->is_active = 0;
         $userClient->save();
+        UserClientLoginLogoutInfoModel::where('user_id', Auth::id())
+                ->whereNull('logout_at')
+                ->latest() // get the most recent login
+                ->first()
+                ?->update(['logout_at' => now()]);
+
         $token = $userClient->currentAccessToken();
         if ($token) {
             $token->delete();

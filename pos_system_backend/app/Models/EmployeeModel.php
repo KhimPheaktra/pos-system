@@ -11,7 +11,7 @@ class EmployeeModel extends Model
 
     protected $table = 'employees';
 
-    protected $fillable = ['id','first_name','last_name','gender_id','dob','pob','salary','image','status','position_id'];
+    protected $fillable = ['id','first_name','last_name','gender_id','dob','pob','salary','image','status','position_id','created_by','updated_by'];
 
     public function gender(){
         return $this->belongsTo(GenderModel::class);
@@ -22,6 +22,15 @@ class EmployeeModel extends Model
 
     public function position(){
         return $this->belongsTo(PositionModel::class);
+    }
+        public function updateBy()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+     public function createBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
 }

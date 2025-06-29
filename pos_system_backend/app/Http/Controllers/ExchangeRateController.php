@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-
+use Illuminate\Support\Facades\Auth;
 
 class ExchangeRateController extends Controller
 {
@@ -19,18 +19,33 @@ class ExchangeRateController extends Controller
 
 
     public function list(){
-        $exchangeRate = ExchangeRateModel::all();
-          try{
+        try{
+              $exchangeRates = ExchangeRateModel::all();
             if(!empty($exchangeRate)){
+                if($exchangeRates->isEmpty()){
+                       return response()->json([
+                        'message' => 'No data found '
+                    ], 404);
+                }
+                
+                $exchangeRateData = [];
+                foreach ($exchangeRates as $exchangeRate){
+                    $exchangeRateData[] = [
+                    'id' => $exchangeRate->id,
+                    'base_currency' => $exchangeRate->base_currency,
+                    'target_currency' => $exchangeRate->target_currency,
+                    'rate' => $exchangeRate->rate,
+                    'note' => $exchangeRate->note,
+                    'created_by' => $exchangeRate->createBy ? $exchangeRate->createBy->name : null,
+                    'updated_by' => $exchangeRate->updateBy ? $exchangeRate->updateBy->name : null,
+                    ];
+                }
+
                 return response()->json([
-                    'exchangeRate' => $exchangeRate,
+                    'exchangeRate' => $exchangeRateData
                 ],200);
             }
-            else{
-                return response()->json([
-                'message' => 'No data found '
-            ], 404);
-            }
+          
 
         }
         catch(\Throwable $e){
@@ -49,7 +64,15 @@ class ExchangeRateController extends Controller
         try{
             if(!empty($exchangeRate)){
                 return response()->json([
-                    'exchangeRate' => $exchangeRate,
+                    'exchangeRate' => [
+                    'id' => $exchangeRate->id,
+                    'base_currency' => $exchangeRate->base_currency,
+                    'target_currency' => $exchangeRate->target_currency,
+                    'rate' => $exchangeRate->rate,
+                    'note' => $exchangeRate->note,
+                    'created_by' => $exchangeRate->createBy ? $exchangeRate->createBy->name : null,
+                    'updated_by' => $exchangeRate->updateBy ? $exchangeRate->updateBy->name : null,
+                ]
                 ],200);
             }   
             else{
@@ -85,12 +108,22 @@ class ExchangeRateController extends Controller
                 'target_currency' => $request->target_currency,
                 'rate' => $request->rate,
                 'note' => $request->note,
+                'created_by' => Auth::id(),
+                'updated_by' => null,
             ]);
 
             if(!empty($exchangeRate)){
                 return response()->json([
                 'message' => 'Exchange rate added successfully',
-                'exchangeRate' => $exchangeRate
+                'exchangeRate' => [
+                    'id' => $exchangeRate->id,
+                    'base_currency' => $exchangeRate->base_currency,
+                    'target_currency' => $exchangeRate->target_currency,
+                    'rate' => $exchangeRate->rate,
+                    'note' => $exchangeRate->note,
+                    'created_by' => $exchangeRate->createBy ? $exchangeRate->createBy->name : null,
+                    'updated_by' => $exchangeRate->updateBy ? $exchangeRate->updateBy->name : null,
+                ]
             ],201);
             }
             else{
@@ -139,12 +172,22 @@ class ExchangeRateController extends Controller
             $exchangeRate->target_currency = $request->target_currency;
             $exchangeRate->rate = $request->rate;
             $exchangeRate->note = $request->note;
+            $exchangeRate->created_by = $request->created_by;
+            $exchangeRate->updated_by = Auth::id();
             $exchangeRate->save();
 
             if(!empty($exchangeRate)){
                 return response()->json([
                 'message' => 'Exchange rate updated successfully ',
-                'exchangeRate' => $exchangeRate
+                  'exchangeRate' => [
+                    'id' => $exchangeRate->id,
+                    'base_currency' => $exchangeRate->base_currency,
+                    'target_currency' => $exchangeRate->target_currency,
+                    'rate' => $exchangeRate->rate,
+                    'note' => $exchangeRate->note,
+                    'created_by' => $exchangeRate->createBy ? $exchangeRate->createBy->name : null,
+                    'updated_by' => $exchangeRate->updateBy ? $exchangeRate->updateBy->name : null,
+                ]
             ], 200);
             }
             else{

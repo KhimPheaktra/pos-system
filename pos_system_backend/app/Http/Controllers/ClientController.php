@@ -9,117 +9,72 @@ use App\Models\ProductModel;
 use App\Models\SaleDetailModel;
 use App\Models\SaleModel;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
-class SaleController extends Controller
+class ClientController extends Controller
 {
     //
+    
     public function __construct()
     {
-        $this->middleware('auth:sanctum');
+                $this->middleware('auth:sanctum');
     }
+     public function listForClient(Request $request)
+        {
+            try {
+                $client = $request->user('client');
 
-
-   public function list()
-    {
-        try {
-            $sales = SaleModel::with(['user','userClient', 'details.orderType'])->get(); 
-
-            $data = [];
-
-            foreach ($sales as $sale) {
-                foreach ($sale->details as $detail) {
-                    $data[] = [
-                        'sale_id' => $sale->id,
-                        'sale_date' => $sale->sale_date,
-                        'sale_by' => $sale->user ? $sale->user->name : null,
-                        'order_by' => $sale->userClient ? $sale->userClient->name : null,
-                        'product_id' => $detail->product_id,
-                        'qty' => $detail->qty,
-                        'price' => $detail->price,
-                        'total_price_usd' => $detail->total_price_usd,
-                        'total_price_riel' => $detail->total_price_riel,
-                        'discount' => $detail->discount,
-                        'order_type' => $detail->orderType ? $detail->orderType->order_type : null,
-                        'status' => $detail->status,
-                        'amount_take_usd' => $detail->amount_take_usd,
-                        'amount_take_riel' => $detail->amount_take_riel,
-                        'amount_change_usd' => $detail->amount_change_usd,
-                        'amount_change_riel' => $detail->amount_change_riel,
-                    ];
+                if (!$client) {
+                    return response()->json(['message' => 'Unauthorized'], 401);
                 }
-            }
 
-          if (!empty($data)) {
-                return response()->json([
-                    'message' => 'Success',
-                    'data' => $data
-                ]);
-            } else {
-                return response()->json([
-                    'message' => 'No data found'
-                ], 404);
-            }
+                $sales = SaleModel::where('order_by', $client->id)
+                    ->with(['details.orderType', 'user', 'userClient'])
+                    ->get();
 
-          
-        } catch (\Throwable $e) {
-            Log::error('Error get sale: ' . $e->getMessage());
-
-            return response()->json([
-                'message' => 'Something went wrong.',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function getById($id){
-          try {
-            $sale = SaleModel::with(['user','userClient', 'details.orderType'])->findOrFail($id);
-
-            $data = [];
-                foreach ($sale->details as $detail) {
-                    $data[] = [
-                        'sale_id' => $sale->id,
-                        'sale_date' => $sale->sale_date,
-                        'sale_by' => $sale->user ? $sale->user->name : null,
-                        'order_by' => $sale->userClient ? $sale->userClient->name : null,
-                        'product_id' => $detail->product_id,
-                        'qty' => $detail->qty,
-                        'price' => $detail->price,
-                        'total_price_usd' => $detail->total_price_usd,
-                        'total_price_riel' => $detail->total_price_riel,
-                        'discount' => $detail->discount,
-                        'order_type' => $detail->orderType ? $detail->orderType->order_type : null,
-                        'status' => $detail->status,
-                        'amount_take_usd' => $detail->amount_take_usd,
-                        'amount_take_riel' => $detail->amount_take_riel,
-                        'amount_change_usd' => $detail->amount_change_usd,
-                        'amount_change_riel' => $detail->amount_change_riel,
-                    ];
+                if ($sales->isEmpty()) {
+                    return response()->json(['message' => 'No sales found.'], 404);
                 }
-                    if (!empty($data)) {
-                        return response()->json([
-                            'message' => 'Success',
-                            'data' => $data
-                        ]);
-                    } else {
-                        return response()->json([
-                            'message' => 'No data found '
-                        ], 404);
+
+                $data = [];
+
+                foreach ($sales as $sale) {
+                    foreach ($sale->details as $detail) {
+                        $data[] = [
+                            'sale_id' => $sale->id,
+                            'sale_date' => $sale->sale_date,
+                            'sale_by' => $sale->user ? $sale->user->name : null,
+                            'order_by' => $sale->userClient ? $sale->userClient->name : null,
+                            'product_id' => $detail->product_id,
+                            'qty' => $detail->qty,
+                            'price' => $detail->price,
+                            'total_price_usd' => $detail->total_price_usd,
+                            'total_price_riel' => $detail->total_price_riel,
+                            'discount' => $detail->discount,
+                            'order_type' => $detail->orderType ? $detail->orderType->order_type : null,
+                            'status' => $detail->status,
+                            'amount_take_usd' => $detail->amount_take_usd,
+                            'amount_take_riel' => $detail->amount_take_riel,
+                            'amount_change_usd' => $detail->amount_change_usd,
+                            'amount_change_riel' => $detail->amount_change_riel,
+                        ];
                     }
+                }
 
-        } catch (\Throwable $e) {
-            Log::error('Error get sale by id: ' . $e->getMessage());
+                return response()->json([
+                    'message' => 'Sales retrieved successfully.',
+                    'data' => $data,
+                ]);
+            } catch (\Throwable $e) {
 
-            return response()->json([
-                'message' => 'Something went wrong.',
-                'error' => $e->getMessage()
-            ], 500);
+                return response()->json([
+                    'message' => 'Something went wrong while fetching sales.',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
         }
-    }
-
 
     public function add(Request $request)
     {
@@ -148,22 +103,14 @@ class SaleController extends Controller
             ->value('rate') ?? 0;
 
         DB::beginTransaction();
-            //  Check if the user's shift is currently active
-        $activeShift = EmployeeShiftModel::where('start_by', $request->sale_by)
-            ->whereNull('end_at')
-            ->first();
 
-        if (!$activeShift) {
-            return response()->json([
-                'message' => 'Your shift is not started. Please start your shift first.'
-            ], 403);
-        }
+
 
         try {
             $sale = SaleModel::create([
                 'sale_date' => now(),
-                'sale_by' => Auth::id(),
-                'order_by' => $request->order_by ?? auth()->id(),
+                'sale_by' => null,
+                'order_by' => Auth::id(),
             ]);
 
             $totalSaleDiscount = 0;
@@ -462,22 +409,4 @@ class SaleController extends Controller
             ], 500);
         }
     }
-
-
-    public function delete($id){
-        try{
-            $sale = SaleModel::findOrFail($id);
-            $sale->delete();
-            return response()->json([
-                'message' => 'Sale deleted successfully',
-            ],200);
-        }
-        catch(\Throwable $e){
-            return response()->json([
-                'message' => 'Faild to deleted sale'
-            ],500);
-        }
-    }
-
-
 }

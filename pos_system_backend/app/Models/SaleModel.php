@@ -11,7 +11,7 @@ class SaleModel extends Model
 
     protected $table = 'sales';
 
-    protected $fillable = ['id','sale_date','sale_by'];
+    protected $fillable = ['id','sale_date','sale_by','order_by'];
 
 
     public function user()
@@ -24,11 +24,18 @@ class SaleModel extends Model
             return $this->belongsTo(UserClientModel::class, 'order_by');
         }
 
-    public function details()
+        public function details()
         {
             return $this->hasMany(SaleDetailModel::class, 'sale_id');
         }
     
+        public function invoice()
+        {
+            return $this->hasOne(InvoiceModel::class, 'sale_id');
+        }
+
+      
+
         
 
 

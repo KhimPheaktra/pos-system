@@ -3,10 +3,13 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ClientAuthController;
+use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ControlUserController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\GenderController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\ListOfUserController;
 use App\Http\Controllers\PositionController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProvinceController;
@@ -41,18 +44,19 @@ Route::post('logout',[AuthController::class,'logout']);
 // Client Auth
 Route::post('login/client',[ClientAuthController::class,'login']);
 Route::post('register/client',[ClientAuthController::class,'registerClient']);
-Route::post('account/client/update/{id}',[ClientAuthController::class,'update']);
+Route::middleware('auth:sanctum')->post('account/client/update/{id}',[ClientAuthController::class,'update']);
 Route::post('logout/client',[ClientAuthController::class,'logout']);
 
-// Routes accessible only by user clients (authenticated with 'client' guard)
+// Routes accessible only by user clients
 Route::middleware(['auth:client', 'verified'])->group(function () {
     Route::get('client/product', [ProductController::class, 'list']);
     Route::get('client/category', [CategoryController::class, 'list']);
-    Route::get('client/sale', [SaleController::class, 'listForClient']); // Only this client's sales
+    Route::get('saleClient/list', [ClientController::class, 'listForClient']); 
+    Route::post('saleClient/add', [ClientController::class, 'add']);
 });
 
 
-// Routes accessible by staff/admin (authenticated with default sanctum guard)
+// Routes accessible by staff/admin
 Route::middleware(['auth:api'])->group(function () {
     // Category API
     Route::get('category', [CategoryController::class , 'list']);
@@ -75,7 +79,6 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('sale/update/{id}', [SaleController::class, 'update']);
     Route::delete('sale/delete/{id}', [SaleController::class, 'delete']);
 
-    
     // Position
     Route::get('position',[PositionController::class ,'list']);
     Route::get('position/{id}',[PositionController::class ,'getById']);
@@ -97,7 +100,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('employee/update/{id}',[EmployeeController::class,'update']);
     Route::delete('employee/delete/{id}',[EmployeeController::class,'delete']);
 
-        // Exchange
+    // Exchange
     Route::get('exchange',[ExchangeRateController::class,'list']);
     Route::get('exchange/{id}',[ExchangeRateController::class,'getById']);
     Route::post('exchange/add',[ExchangeRateController::class,'add']);
@@ -120,5 +123,15 @@ Route::middleware(['auth:api'])->group(function () {
     Route::delete('delete/user/{id}',[ControlUserController::class,'deleteUser']);
     Route::post('ban/client/{id}',[ControlUserController::class,'bannedUserClient']);
     Route::delete('delete/client/{id}',[ControlUserController::class,'deleteUserClient']);
+
+    // List of user
+    Route::get('user/list',[ListOfUserController::class,'listStaff']);
+    Route::get('user/list/{id}',[ListOfUserController::class,'getUserStaffById']);
+    Route::get('userClient/list',[ListOfUserController::class,'listClient']);
+    Route::get('userClient/list/{id}',[ListOfUserController::class,'getUserClientById']);
+   
+    // Invoice
+    Route::get('invoice',[InvoiceController::class,'list']);
+    Route::get('invoice/{id}',[InvoiceController::class,'getById']);
 
 });

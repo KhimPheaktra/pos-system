@@ -38,6 +38,8 @@ class ProductController extends Controller
                         'category' => $product->category ? $product->category->name : null,
                         'description' => $product->description,
                         'image' => $product->image,
+                        'created_by' => $product->createBy ? $product->createBy->name : null,
+                        'updated_by' => $product->updateBy ? $product->updateBy->name : null,
                     ];
                 }),
         ], 200);
@@ -75,6 +77,8 @@ class ProductController extends Controller
                     'category' => $product->category ? $product->category->name : null,
                     'description' => $product->description,
                     'image' => $product->image,
+                    'created_by' => $product->createBy ? $product->createBy->name : null,
+                    'updated_by' => $product->updateBy ? $product->updateBy->name : null,
                 ]
             ], 200);
             }
@@ -96,44 +100,6 @@ class ProductController extends Controller
         
     }
 
-    // public function category()
-    // {
-    //     // return $this->belongsTo(CategoryModel::class);
-    //     $product = ProductModel::all();
-    //     $product = ProductModel::with('category')->find($product->id);
-    //     try{
-    //         if(!empty($product)){
-    //              return response()->json([
-    //             'message' => 'Success',
-    //             'product' => [
-    //                 'id' => $product->id,
-    //                 'code' => $product->code,
-    //                 'name' => $product->name,
-    //                 'price' => $product->price,
-    //                 'discount' => $product->discount,
-    //                 'current_qty' => $product->current_qty,
-    //                 'category' => $product->category ? $product->category->name : null,
-    //                 'description' => $product->description,
-    //                 'image' => $product->image,
-    //     ]
-    //         ],201);
-    //         }
-    //        else{
-    //            return response()->json([
-    //             'message' => 'No data found '
-    //         ], 404);
-    //        }
-    //     }
-        
-    //     catch(\Throwable $e){
-    //         Log::error('Error get product: ' . $e->getMessage());
-    //         return response()->json([
-    //             'message' => 'Something when wrong.',
-    //             'error' => $e->getMessage()
-    //         ],500);
-    //     }
-        
-    // }
 
 
     public function add(Request $request){
@@ -169,6 +135,8 @@ class ProductController extends Controller
                 'category_id' => $request->category_id,
                 'description' => $request->description,
                 'image' => $imagePath,
+                'created_by' => Auth::id(),
+                'updated_by' => null,
 
             ]);
 
@@ -185,7 +153,8 @@ class ProductController extends Controller
                 'new_discount' => $product->discount,
                 'old_code' => null,
                 'new_code' => $product->code,
-                'updated_by' => Auth::id()
+                'created_by' => Auth::id(),
+                'updated_by' => null,
             ]);
             $product = ProductModel::with('category')->find($product->id);
             
@@ -203,6 +172,8 @@ class ProductController extends Controller
                     'category' => $product->category ? $product->category->name : null,
                     'description' => $product->description,
                     'image' => $product->image,
+                    'created_by' => $product->createBy ? $product->createBy->name : null,
+                    'updated_by' => $product->updateBy ? $product->updateBy->name : null,
                 ]
                 ],201);
             }
@@ -271,6 +242,9 @@ class ProductController extends Controller
             $product->price_after_discount = $priceAfterDiscount;
             $product->category_id = $request->category_id;
             $product->description = $request->description;
+            $product->created_by = $request->created_by;
+            $product->update_by = Auth::id();
+            
             $product->save();
 
             if ($oldCode !== $product->code || $oldName !== $product->name || $oldPrice != $product->price || $oldQty != $product->current_qty || $oldDiscount != $product->discount) {
@@ -304,6 +278,8 @@ class ProductController extends Controller
                     'category' => $product->category ? $product->category->name : null,
                     'description' => $product->description,
                     'image' => $product->image,
+                    'created_by' => $product->createBy ? $product->createBy->name : null,
+                    'updated_by' => $product->updateBy ? $product->updateBy->name : null,
                 ]
             ], 200);
             }
@@ -337,4 +313,43 @@ class ProductController extends Controller
             ], 500);
         }
     }
+
+    // public function category()
+    // {
+    //     // return $this->belongsTo(CategoryModel::class);
+    //     $product = ProductModel::all();
+    //     $product = ProductModel::with('category')->find($product->id);
+    //     try{
+    //         if(!empty($product)){
+    //              return response()->json([
+    //             'message' => 'Success',
+    //             'product' => [
+    //                 'id' => $product->id,
+    //                 'code' => $product->code,
+    //                 'name' => $product->name,
+    //                 'price' => $product->price,
+    //                 'discount' => $product->discount,
+    //                 'current_qty' => $product->current_qty,
+    //                 'category' => $product->category ? $product->category->name : null,
+    //                 'description' => $product->description,
+    //                 'image' => $product->image,
+    //     ]
+    //         ],201);
+    //         }
+    //        else{
+    //            return response()->json([
+    //             'message' => 'No data found '
+    //         ], 404);
+    //        }
+    //     }
+        
+    //     catch(\Throwable $e){
+    //         Log::error('Error get product: ' . $e->getMessage());
+    //         return response()->json([
+    //             'message' => 'Something when wrong.',
+    //             'error' => $e->getMessage()
+    //         ],500);
+    //     }
+        
+    // }
 }

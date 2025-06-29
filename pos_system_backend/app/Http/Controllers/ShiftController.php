@@ -90,6 +90,16 @@ class ShiftController extends Controller
             'amount_input' => 'required|numeric',
         ]);
 
+        // Prevent staff from starting new shift when the shift already start 
+        $activeShift = EmployeeShiftModel::whereNull('end_at')->first();
+        if ($activeShift) {
+            return response()->json([
+                'message' => 'A shift is still active. Please end the current shift first.',
+                'active_shift_id' => $activeShift->id
+            ], 409);
+        }
+
+
         try {
             $shift = EmployeeShiftModel::create([
                 'start_by' => $request->start_by,
@@ -147,7 +157,6 @@ class ShiftController extends Controller
         $endTime = Carbon::parse($endAt);
 
         // Get all sales during the shift period
-        // Handle both datetime and date-only formats
         $sales = SaleModel::with('details')
             ->where(function($query) use ($startTime, $endTime) {
                 // For datetime format

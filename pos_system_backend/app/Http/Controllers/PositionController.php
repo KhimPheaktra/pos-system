@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\PositionModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+
 class PositionController extends Controller
 {
     //
@@ -14,36 +16,55 @@ class PositionController extends Controller
         }
 
 
-    public function list(){
-        $position = PositionModel::where('status','ACT')->get();
+    public function list() {
+        try {
+            $positions = PositionModel::where('status', 'ACT')
+                ->with(['createBy', 'updateBy'])
+                ->get();
 
-        try{
-            if(!empty($position)){
-                return response()->json([
-                'position' => $position
-            ],200);
-            }
-          
-            else{
+            if ($positions->isEmpty()) {
                 return response()->json([
                     'message' => 'No data found'
-                ],404);
+                ], 404);
             }
-        }
-        catch(\Throwable $e){
+
+            $positionData = [];
+
+            foreach ($positions as $position) {
+                $positionData[] = [
+                    'id' => $position->id,
+                    'name' => $position->name,
+                    'note' => $position->note,
+                    'created_by' => $position->createBy?->name,
+                    'updated_by' => $position->updateBy?->name,
+                ];
+            }
+
             return response()->json([
-                'message' => 'Something when wrong ',
+                'positions' => $positionData
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Something went wrong',
                 'error' => $e->getMessage()
-            ],500);
+            ], 500);
         }
     }
+
 
     public function getById($id){
         $position = PositionModel::where('status','ACT')->where('id',$id)->first();
         try{
             if(!empty($position)){
                 return response()->json([
-                'position' => $position
+                 'position' => [
+                    'id' => $position->id,
+                    'name' => $position->name,
+                    'note' => $position->note,
+                    'created_by' => $position->createBy ? $position->createBy->name : null,
+                    'updated_by' => $position->updateBy ? $position->updateBy->name : null,
+
+                ]
             ],200);
             }
           
@@ -71,12 +92,21 @@ class PositionController extends Controller
                 'name' => $request->name,
                 'note' => $request->note,
                 'status' => $request->status ?? 'ACT',
+                'created_by' => Auth::id(),
+                'updated_by' => null,
             ]);
                      
                 if(!empty($position)){
                     return response()->json([
                     'message' => 'Position added successfully',
-                    'position' => $position,
+                     'position' => [
+                        'id' => $position->id,
+                        'name' => $position->name,
+                        'note' => $position->note,
+                        'created_by' => $position->createBy ? $position->createBy->name : null,
+                        'updated_by' => $position->updateBy ? $position->updateBy->name : null,
+
+                ]
                 ],200);
                 }
                 else{
@@ -105,13 +135,22 @@ class PositionController extends Controller
             $position->name = $request->name;
             $position->note = $request->note;
             $position->status = $request->status ?? 'ACT';
+            $position->created_by = $request->created_by;
+            $position->updated_by = Auth::id();
 
             $position->save();
 
             if(!empty($position)){
                 return response()->json([
                     'message' => 'Position updated successfully',
-                    'position' => $position
+                     'position' => [
+                        'id' => $position->id,
+                        'name' => $position->name,
+                        'note' => $position->note,
+                        'created_by' => $position->createBy ? $position->createBy->name : null,
+                        'updated_by' => $position->updateBy ? $position->updateBy->name : null,
+
+                ]
                 ],200);
             }
             else{
@@ -132,7 +171,10 @@ class PositionController extends Controller
         try{
             DB::table('positions')
             ->where('id',$id)
-            ->update(['status' => 'DEL']);
+            ->update([
+                'status' => 'DEL',
+                'updated_by' => Auth::id()
+            ]);
 
             return response()->json([
                 'message' => 'Position deleted successfully'

@@ -28,6 +28,14 @@ return new class extends Migration
             $table->foreignId('position_id')
             ->constrained('positions')
             ->onDelete('restrict');
+             $table->foreignId('created_by')
+            ->nullable()
+            ->constrained('users')
+            ->onDelete('set null');
+            $table->foreignId('updated_by')
+            ->nullable()
+            ->constrained('users')
+            ->onDelete('set null');
             $table->timestamps();
         });
     }

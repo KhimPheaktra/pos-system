@@ -16,6 +16,14 @@ return new class extends Migration
             $table->string('name')->nullable();
             $table->text('note')->nullable();
             $table->string('status')->default('ACT');
+            $table->foreignId('created_by')
+            ->nullable()
+            ->constrained('users')
+            ->onDelete('set null');
+            $table->foreignId('updated_by')
+            ->nullable()
+            ->constrained('users')
+            ->onDelete('set null');
             $table->timestamps();
         });
     }
