@@ -16,6 +16,8 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('user_clients')->onDelete('cascade');
             $table->string('token')->unique();
             $table->timestamp('expires_at');
+            $table->ipAddress('ip')->nullable();
+            $table->text('user_agent')->nullable();
             $table->timestamps();
 
         });

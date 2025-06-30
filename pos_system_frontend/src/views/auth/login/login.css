@@ -1,0 +1,380 @@
+/* Login.css */
+
+/* Reset and base styles */
+* {
+    box-sizing: border-box;
+}
+
+/* Main wrapper */
+.login-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    padding: 1rem;
+}
+
+/* Login container */
+.login-container {
+    background: white;
+    padding: 3rem;
+    border-radius: 1rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 
+                0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    width: 100%;
+    max-width: 400px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Logo section */
+.logo-section {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.logo-placeholder {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: bold;
+    color: white;
+    margin: 0 auto 1rem;
+    transition: transform 0.3s ease;
+}
+
+.logo-placeholder:hover {
+    transform: scale(1.05);
+}
+
+.welcome-text {
+    font-size: 1.875rem;
+    font-weight: bold;
+    color: #1f2937;
+    margin: 0 0 0.5rem;
+}
+
+.subtitle {
+    color: #6b7280;
+    margin: 0;
+    font-size: 1rem;
+}
+
+/* Status messages */
+.status-message {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border-radius: 0.5rem;
+    text-align: center;
+    font-weight: 500;
+    animation: slideIn 0.3s ease-out;
+}
+
+.status-message.info {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+}
+
+.status-message.success {
+    background-color: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.status-message.error {
+    background-color: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Form styles */
+.login-form {
+    width: 100%;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+    transition: transform 0.2s ease;
+}
+
+.form-group.focused {
+    transform: scale(1.02);
+}
+
+.form-group.has-error .form-input {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    outline: none;
+    background-color: #ffffff;
+}
+
+.form-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: #f9fafb;
+}
+
+.form-input::placeholder {
+    color: #9ca3af;
+}
+
+/* Error messages */
+.error-message {
+    color: #ef4444;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: block;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Remember me checkbox */
+.remember-me {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.checkbox-input {
+    margin-right: 0.5rem;
+    width: 16px;
+    height: 16px;
+    accent-color: #667eea;
+}
+
+.checkbox-label {
+    font-size: 0.875rem;
+    color: #374151;
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-input:disabled + .checkbox-label {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Login button */
+.login-button {
+    width: 100%;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.login-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.login-button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.login-button:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.login-button.loading {
+    background: #9ca3af;
+}
+
+/* Ripple effect */
+.ripple-effect {
+    position: absolute;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.3);
+    transform: scale(0);
+    animation: ripple 0.6s linear;
+    pointer-events: none;
+}
+
+@keyframes ripple {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+/* Register-Page */
+
+.register-form {
+    text-align: center;
+}
+
+.register-form-link {
+    background: none;
+    border: none;
+    color: #667eea;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s ease;
+}
+
+.register-form-link:hover {
+    text-decoration: underline;
+    color: #5a67d8;
+}
+
+/* Forgot password */
+.forgot-password {
+    text-align: center;
+}
+
+.forgot-password-link {
+    background: none;
+    border: none;
+    color: #667eea;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s ease;
+}
+
+.forgot-password-link:hover {
+    text-decoration: underline;
+    color: #5a67d8;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+    .login-container {
+        padding: 2rem;
+        margin: 0.5rem;
+    }
+    
+    .welcome-text {
+        font-size: 1.5rem;
+    }
+    
+    .logo-placeholder {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .login-container {
+        background: #1f2937;
+        color: #f9fafb;
+    }
+    
+    .welcome-text {
+        color: #f9fafb;
+    }
+    
+    .subtitle {
+        color: #d1d5db;
+    }
+    
+    .form-label {
+        color: #d1d5db;
+    }
+    
+    .form-input {
+        background-color: #374151;
+        border-color: #4b5563;
+        color: #f9fafb;
+    }
+    
+    .form-input:focus {
+        border-color: #667eea;
+    }
+    
+    .form-input::placeholder {
+        color: #9ca3af;
+    }
+    
+    .checkbox-label {
+        color: #d1d5db;
+    }
+}
+
+/* Animation utilities */
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

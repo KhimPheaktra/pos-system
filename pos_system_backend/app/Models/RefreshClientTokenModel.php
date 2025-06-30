@@ -10,7 +10,7 @@ class RefreshClientTokenModel extends Model
     use HasFactory;
 
     protected $table = 'refresh_tokens_clients';
-    protected $fillable = ['user_id', 'token', 'expires_at'];
+    protected $fillable = ['user_id', 'token', 'expires_at','ip','user_agent'];
 
      protected $casts = [
         'expires_at' => 'datetime',

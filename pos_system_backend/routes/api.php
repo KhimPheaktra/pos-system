@@ -39,7 +39,7 @@ Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
 Route::post('login',[AuthController::class,'login']);
 Route::middleware('auth:sanctum')->post('register',[AuthController::class,'registerStaff']);
 Route::middleware('auth:sanctum')->post('account/staff/update/{id}',[AuthController::class,'update']);
-Route::post('staff/refresh-token', [AuthController::class, 'refreshToken']);
+Route::post('refresh-token', [AuthController::class, 'refreshToken']);
 Route::middleware('auth:sanctum')->post('logout',[AuthController::class,'logout']);
 
 // Client Auth

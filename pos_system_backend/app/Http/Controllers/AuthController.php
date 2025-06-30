@@ -27,15 +27,14 @@ class AuthController extends Controller
             if (!Auth::guard('web')->attempt($credentials)) {
                 return response()->json(['message' => 'Email or password are wrong.'], 401);
             }
-               /** @var \App\Models\User $user **/
+
+            /** @var \App\Models\User $user */
             $user = Auth::guard('web')->user();
 
-            // For account got banned
             if ($user->status === 'BAN') {
                 return response()->json(['message' => 'Your account has been banned.'], 403);
             }
 
-            // For account got deleted
             if ($user->status === 'DEL') {
                 return response()->json(['message' => 'Your account has been deleted.'], 403);
             }
@@ -44,51 +43,74 @@ class AuthController extends Controller
             $user->save();
 
             UserLoginLogoutInfoModel::create([
-                'user_id' => Auth::id(),
+                'user_id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'login_at' => now(),
                 'logout_at' => null,
             ]);
 
-            // Create access token 
+            // Create short-lived access token (15 min)
             $tokenResult = $user->createToken('api-token', ['*']);
-            $token = $tokenResult->accessToken; 
-
-            // Set token expiration 24 hours from now
+            $token = $tokenResult->accessToken;
             $token->expires_at = now()->addMinutes(15);
             $token->save();
 
             $accessToken = $tokenResult->plainTextToken;
 
-            // Create refresh token valid for 7 days 
+            // Create secure refresh token
             $refreshTokenString = hash('sha256', Str::random(64));
 
             $user->refreshTokens()->create([
                 'token' => $refreshTokenString,
                 'expires_at' => now()->addDays(7),
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
             ]);
 
-            // Set refresh token in HttpOnly cookie
-            $cookie = cookie('refresh_token', $refreshTokenString, 60 * 24 * 7, null, null, true, true, false, 'Strict');
+            // $cookie = cookie(
+            //     'refresh_token',
+            //     $refreshTokenString,
+            //     60 * 24 * 7, // 7 days
+            //     '/',
+            //     null,
+            //     true,  // Secure
+            //     true,  // HttpOnly
+            //     false, // raw
+            //     'Strict' // SameSite
+            // );
+
+            $cookie = cookie(
+                'refresh_token',
+                $refreshTokenString,
+                60 * 24 * 7,
+                '/',        // Use root path so cookie is sent on all API routes
+                null,
+                false,      // Secure = false for localhost (HTTP, not HTTPS)
+                false,       // HttpOnly = true
+                false,
+                'Lax'       // SameSite = 'Lax' or 'None' with Secure = true in prod
+            );
 
             return response()->json([
                 'user' => $user,
                 'token' => $accessToken,
                 'expires_at' => $token->expires_at->toDateTimeString(),
-            ], 200)->cookie($cookie);
+            ])->cookie($cookie);
 
         } catch (\Throwable $e) {
             return response()->json([
                 'message' => 'Login failed. Please try again later.',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
+
     public function refreshToken(Request $request)
     {
         $refreshToken = $request->cookie('refresh_token');
+
         if (!$refreshToken) {
             return response()->json(['message' => 'Refresh token not found.'], 401);
         }
@@ -102,23 +124,44 @@ class AuthController extends Controller
         $user = $tokenRecord->user;
         $user->tokens()->delete();
 
-        // Issue new access token
-        $tokenResult = $user->createToken('api-token', ['*'], now()->addHours(24));
+        // Create new access token
+        $tokenResult = $user->createToken('api-token', ['*']);
+        $token = $tokenResult->accessToken;
+        $token->expires_at = now()->addMinutes(15);
+        $token->save();
+
         $accessToken = $tokenResult->plainTextToken;
 
-        // Refresh token
+        // Delete the used refresh token
+        $tokenRecord->delete();
+
+        // Generate and store new refresh token
         $newRefreshTokenString = hash('sha256', Str::random(64));
-        $tokenRecord->update([
+
+        $user->refreshTokens()->create([
             'token' => $newRefreshTokenString,
             'expires_at' => now()->addDays(7),
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
         ]);
 
-        $cookie = cookie('refresh_token', $newRefreshTokenString, 60 * 24 * 7, null, null, true, true, false, 'Strict');
+        // Return new refresh token cookie
+        $cookie = cookie(
+            'refresh_token',
+            $newRefreshTokenString,
+            60 * 24 * 7,
+            '/',        // Use root path so cookie is sent on all API routes
+            null,
+            false,      // Secure = false for localhost (HTTP, not HTTPS)
+            false,       // HttpOnly = true
+            false,
+            'Lax'       // SameSite = 'Lax' or 'None' with Secure = true in prod
+        );
 
         return response()->json([
             'token' => $accessToken,
         ])->cookie($cookie);
-    }
+    }   
 
 
     public function registerStaff(RegisterRequest $request)

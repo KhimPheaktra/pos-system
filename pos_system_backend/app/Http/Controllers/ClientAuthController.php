@@ -54,11 +54,7 @@ class ClientAuthController extends Controller
                 'logout_at' => null,
             ]);
 
-
-        // $tokenResult = $user->createToken('api-token', ['*'], now()->addHours(48));
-        // $accessToken = $tokenResult->plainTextToken;
-
-         // Create access token 
+            // Create access token 
             $tokenResult = $user->createToken('api-token', ['*']);
             $token = $tokenResult->accessToken; // model instance
 
@@ -70,19 +66,31 @@ class ClientAuthController extends Controller
 
         // Create refresh token (7 days)
             $refreshTokenString = hash('sha256', Str::random(64));
+
             $user->refreshTokens()->create([
                 'token' => $refreshTokenString,
                 'expires_at' => now()->addDays(7),
-        ]);
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
 
-        // Store refresh token in HttpOnly cookie
-        $cookie = cookie('refresh_token', $refreshTokenString, 60 * 24 * 7, null, null, true, true, false, 'Strict');
+            $cookie = cookie(
+                'refresh_token',
+                $refreshTokenString,
+                60 * 24 * 7, // 7 days
+                '/',
+                null,
+                false,  // Secure
+                false,  // HttpOnly
+                false, // raw
+                'Lax'
+            );
 
-        return response()->json([
-            'user' => $user,
-            'token' => $accessToken,
-            'expires_at' => $token->expires_at->toDateTimeString(),
-        ], 200)->cookie($cookie);
+            return response()->json([
+                'user' => $user,
+                'token' => $accessToken,
+                'expires_at' => $token->expires_at->toDateTimeString(),
+            ])->cookie($cookie);
 
     } catch (\Throwable $e) {
         return response()->json([
@@ -120,20 +128,33 @@ class ClientAuthController extends Controller
 
             $accessToken = $tokenResult->plainTextToken;
 
-        // Rotate refresh token
-        $newRefreshTokenString = hash('sha256', Str::random(64));
-        $tokenRecord->update([
-            'token' => $newRefreshTokenString,
-            'expires_at' => now()->addDays(7),
-        ]);
+            // Rotate refresh token
+            $newRefreshTokenString = hash('sha256', Str::random(64));
+            $tokenRecord->update([
+                'token' => $newRefreshTokenString,
+                'expires_at' => now()->addDays(7), 
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
 
-        $cookie = cookie('refresh_token', $newRefreshTokenString, 60 * 24 * 7, null, null, true, true, false, 'Strict');
+            // Return new refresh token cookie
+            $cookie = cookie(
+                'refresh_token',
+                $newRefreshTokenString,
+                60 * 24 * 7, // 7 days
+                '/',
+                null,
+                false,  // Secure
+                false,  // HttpOnly
+                false,
+                'Lax'
+            );
 
-        return response()->json([
-            'token' => $accessToken,
-            'expires_at' => $token->expires_at->toDateTimeString(),
-        ])->cookie($cookie);
-    }
+            return response()->json([
+                'token' => $accessToken,
+            ])->cookie($cookie);
+    }   
+    
 
 
     public function registerClient(RegisterRequest $request)
@@ -189,10 +210,12 @@ class ClientAuthController extends Controller
             $userClient->refreshTokens()->create([
                 'token' => $refreshTokenString,
                 'expires_at' => now()->addDays(7),
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
             ]);
 
             // Store refresh token in HttpOnly cookie
-            $cookie = cookie('refresh_token', $refreshTokenString, 60 * 24 * 7, null, null, true, true, false, 'Strict');
+            $cookie = cookie('refresh_token', $refreshTokenString, 60 * 24 * 7, null, null, false, false, false, 'Lax');
 
             return response()->json([
                 'message' => 'Registered successfully',
